@@ -5,7 +5,7 @@ description: >-
   project. Detect baseline, install curated library, generate project DESIGN.md,
   review generated code, merge approved rules. Use when user says "ds4a init",
   "ds4a review", "ds4a merge", or wants a design system for their AI agent.
-version: 1.0.0
+version: 1.1.0
 author: thenom4design
 license: MIT
 metadata:
@@ -62,9 +62,10 @@ Check project root for existing design system:
 1. .ds4a/library.md exists? → already initialized → skip to Step 3 (generate)
 2. DESIGN.md exists? → already has one → skip to Step 3 (generate)
 3. AGENTS.md exists? → scenario B (has rules + maybe tokens)
-4. tokens.css / tokens.json exists? → scenario C (has tokens, no rules)
-5. tailwind.config.js/ts exists? → scenario C (has config, extract)
-6. None of the above → scenario A (no baseline)
+4. globals.css has shadcn vars (`--background`, `--primary`)? → scenario D (shadcn baseline)
+5. tokens.css / tokens.json exists? → scenario C (has tokens, no rules)
+6. tailwind.config.js/ts exists? → scenario C (has config, extract)
+7. None of the above → scenario A (no baseline)
 ```
 
 ### Step 2: Install or convert (based on scenario)
@@ -107,8 +108,26 @@ Check project root for existing design system:
 5. Report: "Found tokens but no rules. Extracted [N] tokens, generated
    [M] guardrails. Review and adjust."
 
+**Scenario D — shadcn/ui baseline (user-customized theme):**
+The user's shadcn theme (customized at https://ui.shadcn.com/create or in
+`globals.css`) is the foundation. ds4a imports it — never overwrites.
+
+1. Read `globals.css` → extract `:root` (light) + `.dark` blocks
+2. Convert `oklch()` → hex with `scripts/oklch-to-hex.py`
+   (`cat globals.css | python3 scripts/oklch-to-hex.py`)
+3. Map shadcn vars → ds4a YAML frontmatter (see
+   `references/shadcn-baseline.md` for the full mapping table)
+4. Generate guardrails from imported theme patterns (Scenario C logic:
+   radius → sharp/rounded rule, primary → action-only rule, etc.)
+5. Run AA contrast check on `muted-foreground` vs `background`. Flag if
+   it fails.
+6. Write imported library to `.ds4a/library.md`
+7. Report: "Found shadcn theme. Imported [N] tokens from globals.css.
+   [M] guardrails generated. Contrast check: [pass/fail]."
+
 **For all scenarios:**
-- Never touch existing files (AGENTS.md, tokens.css, tailwind.config.js)
+- Never touch existing files (AGENTS.md, tokens.css, globals.css,
+  tailwind.config.js)
 - Only create new files: `.ds4a/library.md` and `DESIGN.md`
 
 ### Step 3: Generate project DESIGN.md
@@ -299,6 +318,7 @@ If yes, re-run Phase 1 Step 3 (generate) with the updated `.ds4a/library.md`.
 | `tokens.css` | Token values (CSS variables) | C |
 | `src/tokens/tokens.json` | Nested tokens | B or C |
 | `src/tokens/tokens.css` | Nested CSS variables | C |
+| `globals.css` (shadcn vars) | `--background`, `--primary` oklch | D |
 | `tailwind.config.js/ts` | Colors, fonts, spacing in JS | C |
 | `DESIGN.md` | Already converted | Skip (already initialized) |
 | `.ds4a/library.md` | Personal master library | Skip (already initialized) |
@@ -380,6 +400,9 @@ fontFamily: { sans: ['Inter'] } →  typography.*.fontFamily: "Inter"
 - `references/master-library.md` — curated default baseline (sharp-edge
   warm-white, 14 component contracts, 44 guardrails). Installed for scenario
   A (no baseline).
+- `references/shadcn-baseline.md` — shadcn/ui theme import for scenario D:
+  variable mapping (oklch → hex), radius conversion, dark mode handling,
+  guardrail derivation, component anatomy mapping.
 - `references/review-prompt.md` — full review prompt with three-pass
   architecture, 26-item scan checklist, quality filter, taste lock,
   calibration examples.
@@ -389,6 +412,7 @@ fontFamily: { sans: ['Inter'] } →  typography.*.fontFamily: "Inter"
   layout rules matrix (14×8) for project type → component/layout mapping.
 - `templates/project-design.md` — blank DESIGN.md template with placeholder
   variables for generated output.
+- `scripts/oklch-to-hex.py` — oklch → hex converter for shadcn theme import.
 
 ---
 
