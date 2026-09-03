@@ -5,7 +5,7 @@ description: >-
   project. Detect baseline, install curated library, generate project DESIGN.md,
   review generated code, merge approved rules. Use when user says "ds4a init",
   "ds4a review", "ds4a merge", or wants a design system for their AI agent.
-version: 1.1.0
+version: 1.2.0
 author: thenom4design
 license: MIT
 metadata:
@@ -72,10 +72,11 @@ Check project root for existing design system:
 
 **Scenario A — no baseline:**
 1. Copy `references/master-library.md` to `.ds4a/library.md`
-2. This is the curated default: sharp-edge warm-white aesthetic, 14 component
-   contracts, 44 guardrails, 10-item pre-flight checklist
+2. This is the curated default: sharp-edge warm-white aesthetic, 13 core
+   component contracts (see `references/core-components.md`), 44 guardrails,
+   10-item pre-flight checklist
 3. Report: "No design system found. Installed curated baseline (sharp-edge
-   warm-white)."
+   warm-white, 13 core contracts)."
 
 **Scenario B — has AGENTS.md:**
 1. Read AGENTS.md for rules + guardrails
@@ -230,6 +231,11 @@ the three passes:
 - Check: component types not covered, responsive breakpoints, animation
   values, layout patterns, error/loading/empty states
 
+**Promotion check (tier mechanics — see `references/core-components.md`):**
+- A `(grown)` contract included in 3+ separate project DESIGN.md generations
+  → output promotion suggestion: `Promote [X] to core? [y/n]`
+- On yes (at merge): remove `(grown)` marker, add to core list
+
 ### Step 3: Apply quality filter
 
 Every suggestion must pass ALL 5 checks:
@@ -282,6 +288,11 @@ For each approved suggestion, determine type and insert location:
 | prose-rule | Relevant `##` section | Add under appropriate subsection |
 | guardrail | `## Do's and Don'ts` | Add ✅ Do or ❌ Don't line |
 | component-contract | `## Components` | Add new `###` subsection |
+
+**Tier marker:** a new component-contract added by merge gets `(grown)` in its
+header: `### Checkbox (grown)`. Core contracts never get the marker. Promotion
+(see Phase 4) removes the `(grown)` marker and adds the component to the core
+list in the library's component inventory.
 
 **Merge rules:**
 - Insert in-place — no new files, no version copies
@@ -403,6 +414,9 @@ fontFamily: { sans: ['Inter'] } →  typography.*.fontFamily: "Inter"
 - `references/shadcn-baseline.md` — shadcn/ui theme import for scenario D:
   variable mapping (oklch → hex), radius conversion, dark mode handling,
   guardrail derivation, component anatomy mapping.
+- `references/core-components.md` — benchmark-backed core tier: what "basic
+  components" means (UXPin/shadcn/Base UI cross-reference), core vs grown vs
+  promoted tiers, promotion rules, matrix-parity invariant.
 - `references/review-prompt.md` — full review prompt with three-pass
   architecture, 26-item scan checklist, quality filter, taste lock,
   calibration examples.

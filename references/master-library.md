@@ -1,5 +1,5 @@
 ---
-version: alpha
+version: 1
 name: ds4a-baseline
 description: >-
   Warm white, sharp edges, blue accent. Inter + Fauna One. Calm professional.
@@ -193,6 +193,50 @@ components:
     radio-card-padding: 16px
     radio-card-gap: 16px
     radio-card-padding-mobile: 14px
+  modal:
+    radius: 0px
+    padding: 24px
+    width-sm: 320px
+    width-md: 480px
+    width-lg: 640px
+    backdrop: "rgba(26, 26, 26, 0.4)"
+    shadow: elevated
+    header-gap: 8px
+    footer-gap: 16px
+    variants: [sm, md, lg]
+  tabs:
+    radius: 0px
+    trigger-padding: "8px 12px"
+    trigger-font-size: 16px
+    trigger-font-weight: 500
+    indicator-height: 2px
+    indicator-color: primary
+    list-border: "1px solid var(--color-border)"
+    variants: [underline]
+  table:
+    radius: 0px
+    row-padding: "12px 16px"
+    header-font-size: 14px
+    header-font-weight: 500
+    header-color: muted-foreground
+    cell-font-size: 14px
+    cell-font-weight: 400
+    row-border: "1px solid var(--color-border)"
+    hover-background: muted
+    selected-background: "rgba(26,94,255,0.04)"
+    variants: [default]
+  sidebar:
+    radius: 0px
+    width: 240px
+    item-padding: "12px"
+    item-font-size: 14px
+    item-font-weight: 500
+    item-gap: 8px
+    section-header-padding: "8px 12px"
+    section-header-font-size: 12px
+    active-indicator: "2px solid var(--color-primary)"
+    container-border: "1px solid var(--color-border)"
+    variants: [default]
 ---
 
 ## Overview
@@ -508,6 +552,105 @@ Single-select radio group. Two sub-components: `Radio` (inline) and `RadioCard` 
 - Indicator: 18px (RadioCard) / 16px (Radio), 2px border, circular. Blue when checked or hovered.
 - Disabled: `opacity: 0.5`, `cursor: not-allowed`, `pointer-events: none`.
 - Transitions: `duration.fast` `ease-out` on border-color, opacity.
+
+### Modal
+
+**3 sizes: `sm`, `md`, `lg`. Default `md`.**
+
+| Size | Width | Use for |
+|---|---|---|
+| `sm` | 320px | Confirmations, short alerts |
+| `md` | 480px | Forms, standard dialogs |
+| `lg` | 640px | Settings panels, multi-step content |
+
+| Part | Element | Purpose |
+|---|---|---|
+| `Modal.Backdrop` | `<div>` | Overlay. `rgba(26,26,26,0.4)`. Click closes. |
+| `Modal.Container` | `<div role="dialog">` | Content surface. Centered. |
+| `Modal.Header` | `<div>` | Title (`title-h6`) + close button. Gap `sm` (8px). |
+| `Modal.Body` | `<div>` | Content. Padding: 0 — container padding covers it. |
+| `Modal.Footer` | `<div>` | Actions. Gap `lg` (16px). Right-aligned. |
+
+- Container: `color.background`, `shadow.elevated`, **no border** (elevation IS the separation — border + shadow on one element is forbidden by the elevation rule).
+- Radius: 0px (sharp).
+- Container padding: `xl` (24px).
+- Padding between header, body, footer: `lg` (16px) each.
+- **Backdrop blocks interaction with the page.** No scrolling underneath while open (`overflow: hidden` on body).
+- Backdrop fade: `duration.smooth` (300ms) `ease-out`. Container entrance: `duration.smooth`, transform + opacity only.
+- **Focus trap.** Focus enters the modal on open, returns to trigger on close. Esc closes. Close button is a `ghost` Button with icon, top-right.
+- **One modal at a time.** Never stack modals. If a modal needs to confirm a destructive action, that confirmation is a second modal replacing the first — not an overlay on an overlay.
+- Title uses `title-h6` (20px). One title per modal.
+- Footer buttons: max 2. Primary action rightmost. Destructive confirmations use `destructive` variant Button — never a `primary` button for a delete.
+
+### Tabs
+
+**1 variant: `underline`.**
+
+| Part | Element | Purpose |
+|---|---|---|
+| `Tabs.List` | `<div role="tablist">` | Row of triggers. Bottom border `1px solid color.border`. |
+| `Tabs.Trigger` | `<button role="tab">` | Tab label. Padding `sm md` (8px 12px). `label-md` typography. |
+| `Tabs.Indicator` | `<div>` | 2px bar under the active tab. `color.primary`. |
+| `Tabs.Content` | `<div role="tabpanel">` | Active panel. Padding `lg` (16px) top. |
+
+- Trigger: `label-md` (16px, Medium 500), `color.foreground`. Inactive trigger: `color.muted-foreground`.
+- Active trigger: `color.foreground` + 2px `color.primary` underline indicator.
+- Hover (inactive): `color.foreground` text. No background change.
+- Disabled trigger: `opacity: 0.5`, `cursor: not-allowed`.
+- Indicator slides between tabs: `duration.smooth` (300ms) `ease-out`. Animate `transform` only — never width/position properties.
+- **Keyboard navigation.** Arrow keys move between triggers, Home/End jump to first/last. Each trigger is tabbable.
+- **No pill/boxed variants.** The underline style is the convention — pills are decorative variety, and this system doesn't do decorative variety.
+- Full-width variant: triggers share width equally (`flex: 1`). Default is content-width.
+
+### Table
+
+**1 variant: `default`.**
+
+| Part | Element | Purpose |
+|---|---|---|
+| `Table.Root` | `<table>` | Container. Full-width of parent. |
+| `Table.Header` | `<thead>` | Header row. Bottom border `1px solid color.border`. |
+| `Table.Row` | `<tr>` | Data row. Bottom border `1px solid color.border`. |
+| `Table.Cell` | `<td>` | Cell. Paragraph-sm typography. |
+| `Table.HeaderCell` | `<th>` | Header cell. Label-sm typography. |
+
+- Row padding: `md lg` (12px 16px). One density only.
+- Header cells: `label-sm` (14px, Medium 500), `color.muted-foreground`. No background — the border separates.
+- Body cells: `paragraph-sm` (14px, Regular 400), `color.foreground`.
+- **Row hover: background `color.muted`.** Hover signals interactivity only — if rows are not clickable, no hover.
+- Selected row: `rgba(26,94,255,0.04)` (blue tint, same as RadioCard checked).
+- Row selection indicator: 16px checkbox placeholder, leftmost column. Selection is visual — checkable rows use the grown-checkbox contract if present, else a plain checkbox input.
+- **Sort state in header cell:** sort icon (chevron) + `label-sm` weight on the active sort column. Only one sort column at a time.
+- Numeric columns right-aligned. Text columns left-aligned. Never center data.
+- **Empty state:** single row, `paragraph-sm` `muted-foreground`, centered, "No results" + optional action link. Never render a bare empty `<tbody>`.
+- **Loading state:** first 3-5 rows as skeleton bars (`color.muted` blocks, `duration.fast` pulse). Never a spinner overlay on the table.
+- Radius: 0px. No zebra striping — borders separate rows.
+- Max-width: parent container governs. Horizontal scroll (`overflow-x: auto`) if columns exceed width — never shrink cells below their padding.
+
+### Sidebar
+
+**1 variant: `default`.**
+
+| Part | Element | Purpose |
+|---|---|---|
+| `Sidebar.Container` | `<nav>` | Fixed 240px column. Border-right `1px solid color.border`. |
+| `Sidebar.Header` | `<div>` | Logo/brand block. Padding `lg` (16px). |
+| `Sidebar.Section` | `<div>` | Group of items under a section header. |
+| `Sidebar.SectionHeader` | `<div>` | `label-xs` (12px, Medium 500), `muted-foreground`, uppercase. |
+| `Sidebar.Item` | `<a>` | Nav item. Padding `md` (12px). Gap `sm` (8px) between icon and label. |
+| `Sidebar.Footer` | `<div>` | Bottom block. User menu, collapse trigger. |
+
+- Width: 240px fixed. Content area fills remaining width (grid `240px 1fr`).
+- Item: `label-sm` (14px, Medium 500), `color.foreground`. Icon 16px.
+- Hover: background `color.muted`. Text stays `color.foreground`.
+- Active: background `color.muted` + 2px `color.primary` left-edge indicator. Text `color.foreground`.
+- Item radius: 0px. Indicator is an inset border — not a pill, not a background fill.
+- Section header padding: `sm md` (8px 12px). Gap between sections: `lg` (16px).
+- **Section headers are not links.** They label groups only.
+- Container background: `color.background` — same as canvas. The border separates, not a tint.
+- Disabled item: `opacity: 0.5`, `cursor: not-allowed`.
+- Mobile (< 768px): sidebar collapses behind a hamburger trigger into a full-height Sheet-like overlay (uses Modal elevation + backdrop rules). Never render a squished 240px column on mobile.
+- Collapse trigger (desktop, optional): icon-only button, `ghost` variant. Collapsed state = 64px, icons only, no labels. Transition: `duration.smooth` on width.
 
 ## Do's and Don'ts
 
