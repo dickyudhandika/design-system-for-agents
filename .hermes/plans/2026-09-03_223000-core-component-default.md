@@ -1,7 +1,7 @@
 # ds4a Core Component Default — benchmark-backed basic tier
 
 ## Status
-DRAFT
+COMPLETED
 
 ## Goal
 Define what "basic components" means via real design-system benchmarks, make that the installed default library, so the review→merge loop grows every library from the same benchmarked floor.
@@ -123,3 +123,4 @@ README.md                              ← v1.1.0 catch-up + core tier section
 ## Changelog
 - 2026-09-03: Initial draft. Benchmark run live (UXPin, shadcn registry, Base UI). Folds in pending README v1.1.0 catch-up plan.
 - 2026-09-03: LINK — superseded-by relationship: this plan's Step 4 absorbs all edits from `2026-09-03_214800-readme-v1.1.0-catchup.md`; execute this plan instead.
+- 2026-09-03: EXECUTED. Option B rejected by user (ship 13). Commit `ad1601a` pushed; Documents clone + installed skill byte-identical; matrix↔library parity 13==13 validated; YAML parses; frontmatter version 1; SKILL.md v1.2.0. All steps 1-5 done.
