@@ -22,12 +22,13 @@ with every project.
 
 ## Commands
 
-| Command | Phase | What happens |
-|---|---|---|
-| `ds4a init [type]` | 1+2 | Detect baseline → install/convert → generate project DESIGN.md |
-| *(build normally)* | 3 | Agent reads DESIGN.md, generates UI. No skill action. |
-| `ds4a review` | 4 | Three-pass analysis on generated code. Interactive approve/reject. |
-| `ds4a merge` | 5 | Merge approved rules into `.ds4a/library.md` in-place. |
+| Command | What happens |
+|---|---|
+| `ds4a init [type]` | Detect baseline → install/convert → generate project DESIGN.md |
+| *(build normally)* | Agent reads DESIGN.md, generates UI. Skill stays out. |
+| `ds4a review` | Three-pass analysis on generated code. Interactive approve/reject. |
+| `ds4a merge` | Merge approved rules into `.ds4a/library.md` in-place. |
+| `ds4a preview` | Open `preview/index.html` in the browser — live showcase of the 13 core contracts. |
 
 All commands are explicit — the developer types them. No auto-triggering.
 
@@ -189,6 +190,22 @@ If a component needed by the project isn't in the DESIGN.md, the agent
 builds it following the design system rules (tokens, guardrails, aesthetic).
 This is expected — it's how the library grows. The review phase catches the
 new component and suggests it as a contract.
+
+---
+
+## Phase 6: `ds4a preview`
+
+Explicit trigger. Opens the showcase in the default browser.
+
+1. Locate `preview/index.html` inside this skill's directory
+2. Open it: `open preview/index.html` (macOS) / `xdg-open` (Linux)
+3. The showcase is self-contained — no server, no build, works offline
+   (fonts fall back to system faces without network)
+
+The showcase dogfoods the system: sidebar navigation IS the Sidebar contract,
+the page obeys the pre-flight checklist, every displayed value comes from
+`references/master-library.md` frontmatter. If a previewed component and its
+contract disagree, the contract wins — fix the showcase, not the library.
 
 ---
 
@@ -417,6 +434,9 @@ fontFamily: { sans: ['Inter'] } →  typography.*.fontFamily: "Inter"
 - `references/core-components.md` — benchmark-backed core tier: what "basic
   components" means (UXPin/shadcn/Base UI cross-reference), core vs grown vs
   promoted tiers, promotion rules, matrix-parity invariant.
+- `preview/index.html` — live showcase. Self-contained static page: 13 core
+  contracts + foundations, sidebar-navigated, built with the system itself.
+  Opened by `ds4a preview`.
 - `references/review-prompt.md` — full review prompt with three-pass
   architecture, 26-item scan checklist, quality filter, taste lock,
   calibration examples.

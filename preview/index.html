@@ -1,0 +1,1516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ds4a — Design System for Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fauna+One&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────────────────────
+   ds4a tokens — 1:1 from references/master-library.md frontmatter v1
+   ───────────────────────────────────────────────────────────── */
+:root {
+  /* colors */
+  --color-background: #FDFCF8;
+  --color-foreground: #1A1A1A;
+  --color-secondary: #A1A1A1;
+  --color-muted: #F3F1EB;
+  --color-border: #E5E2D9;
+  --color-muted-foreground: #A1A1A1;
+  --color-primary: #1A5EFF;
+  --color-primary-foreground: #FFFFFF;
+  --color-destructive: #C73E3E;
+  /* titles — Fauna One, Medium 500 */
+  --title-h1: 56px; --lh-h1: 0.96; --ls-h1: -0.01em;
+  --title-h2: 48px; --lh-h2: 1.17; --ls-h2: -0.01em;
+  --title-h3: 40px; --lh-h3: 1.2;  --ls-h3: -0.01em;
+  --title-h4: 32px; --lh-h4: 1.25; --ls-h4: -0.005em;
+  --title-h5: 24px; --lh-h5: 1.33; --ls-h5: 0;
+  --title-h6: 20px; --lh-h6: 1.4;  --ls-h6: 0;
+  --font-title: "Fauna One", Georgia, serif;
+  /* labels + paragraphs — Inter */
+  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+  /* spacing */
+  --space-xs: 4px; --space-sm: 8px; --space-md: 12px; --space-lg: 16px;
+  --space-xl: 24px; --space-2xl: 32px; --space-3xl: 48px; --space-4xl: 64px;
+  /* radius — sharp aesthetic, deliberate */
+  --radius-xs: 0px; --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-full: 0px;
+  /* elevation */
+  --shadow-subtle: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 8px rgba(0,0,0,0.08);
+  /* motion */
+  --duration-fast: 150ms; --duration-smooth: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* ── base ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-size: 16px; font-weight: 400; line-height: 1.5; letter-spacing: -0.011em;
+}
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-title); font-weight: 500; }
+h1 { font-size: var(--title-h2); line-height: var(--lh-h2); letter-spacing: var(--ls-h2); }
+h2 { font-size: var(--title-h4); line-height: var(--lh-h4); letter-spacing: var(--ls-h4); }
+h3 { font-size: var(--title-h5); line-height: var(--lh-h5); }
+h4 { font-size: var(--title-h6); line-height: var(--lh-h6); }
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; color: var(--color-muted-foreground); }
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.transition { transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out); }
+
+/* ── layout ── */
+.layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.main { padding: var(--space-3xl) var(--space-4xl); max-width: 1080px; }
+.view { display: none; }
+.view.active { display: block; animation: viewIn var(--duration-smooth) var(--ease-out); }
+@keyframes viewIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.view-head { margin-bottom: var(--space-2xl); }
+.view-head .kicker { font-size: 14px; font-weight: 500; color: var(--color-muted-foreground); letter-spacing: -0.006em; margin-bottom: var(--space-sm); }
+.view-head h1 { margin-bottom: var(--space-sm); }
+.view-head .lede { font-size: 18px; line-height: 1.33; letter-spacing: -0.015em; color: var(--color-muted-foreground); max-width: 640px; }
+
+.sect { margin-bottom: var(--space-2xl); }
+.sect > h2 { margin-bottom: var(--space-lg); font-size: var(--title-h6); font-family: var(--font-sans); font-weight: 500; letter-spacing: 0; color: var(--color-foreground); }
+.sect > h2 .n { color: var(--color-muted-foreground); font-weight: 400; margin-right: var(--space-sm); }
+.sect + .sect { border-top: 1px solid var(--color-border); padding-top: var(--space-xl); }
+
+/* ── sidebar (the live Sidebar contract) ── */
+.sidebar {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-background);
+  display: flex; flex-direction: column;
+}
+.sidebar-header { padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
+.sidebar-header .brand { display: flex; align-items: center; gap: var(--space-sm); }
+.monogram {
+  width: 28px; height: 28px; background: var(--color-foreground); color: var(--color-background);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 500; letter-spacing: 0;
+}
+.sidebar-header .name { font-family: var(--font-title); font-size: 20px; font-weight: 500; line-height: 1.4; }
+.sidebar-header .tag { font-size: 12px; font-weight: 500; color: var(--color-muted-foreground); margin-top: var(--space-xs); }
+.sidebar-nav { padding: var(--space-md) 0; flex: 1; }
+.sidebar-section { margin-bottom: var(--space-lg); }
+.sidebar-section-header { padding: var(--space-sm) var(--space-md); font-size: 12px; font-weight: 500; color: var(--color-muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; }
+.sidebar-item {
+  display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-md);
+  font-size: 14px; font-weight: 500; color: var(--color-foreground);
+  border-left: 2px solid transparent;
+}
+.sidebar-item .ic { width: 16px; height: 16px; flex: none; opacity: 0.55; }
+.sidebar-item:hover { background: var(--color-muted); text-decoration: none; }
+.sidebar-item.active { background: var(--color-muted); border-left: 2px solid var(--color-primary); }
+.sidebar-item.active .ic { opacity: 1; }
+.sidebar-footer { padding: var(--space-lg); border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-muted-foreground); display: flex; align-items: center; justify-content: space-between; }
+.sidebar-footer .v { font-weight: 500; color: var(--color-foreground); }
+
+/* ── buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  font-family: var(--font-sans); font-weight: 500; border: none; border-radius: 0;
+  cursor: pointer; text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
+}
+.btn-sm { padding: 8px 12px; font-size: 14px; line-height: 1.43; letter-spacing: -0.006em; }
+.btn-md { padding: 10px 16px; font-size: 16px; line-height: 1.5; letter-spacing: -0.011em; }
+.btn-lg { padding: 12px 24px; font-size: 24px; line-height: 1.33; letter-spacing: -0.015em; }
+.btn-primary { background: var(--color-primary); color: var(--color-primary-foreground); }
+.btn-primary:hover { filter: brightness(0.92); }
+.btn-secondary { background: var(--color-muted); color: var(--color-foreground); }
+.btn-secondary:hover { background: var(--color-border); }
+.btn-ghost { background: transparent; color: var(--color-foreground); }
+.btn-ghost:hover { box-shadow: inset 0 0 0 1px var(--color-border); }
+.btn:disabled, .btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.btn-icon { padding: 8px; }
+
+/* ── inputs ── */
+.input {
+  width: 100%; border: 1px solid var(--color-border); border-radius: 0;
+  background: var(--color-background); color: var(--color-foreground);
+  font-family: var(--font-sans); font-weight: 400;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.input::placeholder { color: var(--color-muted-foreground); }
+.input:hover { border-color: var(--color-muted-foreground); }
+.input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.input-sm { padding: 8px 12px; font-size: 14px; line-height: 1.43; letter-spacing: -0.006em; }
+.input-md { padding: 12px 16px; font-size: 16px; line-height: 1.5; letter-spacing: -0.011em; }
+.input-lg { padding: 16px 24px; font-size: 24px; line-height: 1.33; letter-spacing: -0.015em; }
+.input-error, .input-error:focus { outline-color: var(--color-destructive); border-color: var(--color-destructive); }
+.input:disabled, .input.disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── cards ── */
+.card { background: var(--color-background); border: 1px solid var(--color-border); border-radius: 0; padding: var(--space-xl); }
+.card-elevated { box-shadow: var(--shadow-elevated); border: none; }
+.card-subtle { box-shadow: var(--shadow-subtle); }
+.card-flush { padding: 0; overflow: hidden; }
+.card-flush .media { background: var(--color-muted); height: 120px; border-bottom: 1px solid var(--color-border); }
+.card-flush .body { padding: var(--space-xl); }
+.card h4 { margin-bottom: var(--space-sm); }
+.card p { font-size: 14px; line-height: 1.43; color: var(--color-muted-foreground); }
+
+/* ── badges ── */
+.badge {
+  display: inline-flex; align-items: center; gap: var(--space-xs);
+  padding: 4px 8px; font-size: 12px; font-weight: 500; line-height: 1.33; letter-spacing: 0;
+  border-radius: 0; white-space: nowrap;
+}
+.badge-default { background: var(--color-muted); color: var(--color-foreground); border: 1px solid var(--color-border); }
+.badge-primary { background: var(--color-primary); color: var(--color-primary-foreground); }
+.badge-destructive { background: var(--color-destructive); color: var(--color-primary-foreground); }
+.badge .dot { width: 6px; height: 6px; border-radius: 0; background: currentColor; opacity: 0.7; }
+
+/* ── field / fieldset / form ── */
+.field { display: flex; flex-direction: column; gap: var(--space-sm); }
+.field-label { font-size: 14px; font-weight: 500; letter-spacing: -0.006em; color: var(--color-foreground); }
+.field-desc { font-size: 14px; color: var(--color-muted-foreground); }
+.field-error { font-size: 14px; color: var(--color-destructive); }
+.field[data-invalid] .input { border-color: var(--color-destructive); }
+.field[data-invalid] .input:focus { outline-color: var(--color-destructive); }
+fieldset { border: none; }
+.fieldset { display: flex; flex-direction: column; gap: var(--space-md); }
+.fieldset legend { font-size: 16px; font-weight: 500; padding: 0; margin-bottom: var(--space-md); }
+.form { display: flex; flex-direction: column; gap: var(--space-xl); max-width: 420px; }
+
+/* ── select ── */
+.select { position: relative; width: 280px; }
+.select-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm);
+  width: 100%; padding: 12px 16px; border: 1px solid var(--color-border); border-radius: 0;
+  background: var(--color-background); font-family: var(--font-sans); font-size: 16px; font-weight: 400;
+  cursor: pointer; text-align: left;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.select-trigger:hover { border-color: var(--color-muted-foreground); }
+.select-trigger .chev { transition: transform var(--duration-fast) var(--ease-out); }
+.select[data-open] .chev { transform: rotate(180deg); }
+.select[data-open] .select-trigger { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.select-popup {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
+  background: var(--color-background); box-shadow: var(--shadow-elevated); border-radius: 0;
+  padding: var(--space-xs); max-height: 280px; overflow-y: auto;
+}
+.select[data-open] .select-popup { display: block; }
+.select-item {
+  display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md);
+  font-size: 16px; cursor: pointer; border-radius: 0; margin-bottom: 2px;
+}
+.select-item:hover, .select-item.highlight { background: var(--color-muted); }
+.select-item .ind { width: 6px; height: 6px; flex: none; background: transparent; }
+.select-item.selected { font-weight: 500; }
+.select-item.selected .ind { background: var(--color-primary); }
+.select-item.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+/* ── radio ── */
+.radio-group { display: flex; flex-direction: column; gap: var(--space-sm); max-width: 420px; }
+.radio { display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 16px; }
+.radio input { position: absolute; opacity: 0; pointer-events: none; }
+.radio .indicator { width: 16px; height: 16px; border: 2px solid var(--color-border); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: border-color var(--duration-fast) var(--ease-out); }
+.radio:hover .indicator { border-color: var(--color-primary); }
+.radio input:checked ~ .indicator { border-color: var(--color-primary); }
+.radio input:checked ~ .indicator::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
+.radio input:focus-visible ~ .indicator { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.radio-card { display: flex; align-items: flex-start; gap: var(--space-lg); padding: var(--space-lg); border: 1px solid var(--color-border); cursor: pointer; width: 100%; background: var(--color-background); transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out); }
+.radio-card:hover { border-color: var(--color-primary); }
+.radio-card input { position: absolute; opacity: 0; pointer-events: none; }
+.radio-card .indicator { width: 18px; height: 18px; border: 2px solid var(--color-border); border-radius: 50%; flex: none; margin-top: 2px; display: inline-flex; align-items: center; justify-content: center; transition: border-color var(--duration-fast) var(--ease-out); }
+.radio-card input:checked ~ .indicator { border-color: var(--color-primary); }
+.radio-card input:checked ~ .indicator::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
+.radio-card:has(input:checked) { border-color: var(--color-primary); background: rgba(26,94,255,0.04); }
+.radio-card .t { font-size: 16px; font-weight: 500; }
+.radio-card .d { font-size: 14px; color: var(--color-muted-foreground); margin-top: 2px; }
+
+/* ── modal ── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(26,26,26,0.4); z-index: 90;
+  display: none; align-items: center; justify-content: center; padding: var(--space-lg);
+  opacity: 0; transition: opacity var(--duration-smooth) var(--ease-out);
+}
+.modal-backdrop.open { display: flex; }
+.modal-backdrop.visible { opacity: 1; }
+.modal-container {
+  background: var(--color-background); box-shadow: var(--shadow-elevated); border-radius: 0;
+  padding: var(--space-xl); width: 100%; opacity: 0; transform: translateY(8px);
+  transition: opacity var(--duration-smooth) var(--ease-out), transform var(--duration-smooth) var(--ease-out);
+}
+.modal-backdrop.visible .modal-container { opacity: 1; transform: none; }
+.modal-sm { max-width: 320px; } .modal-md { max-width: 480px; } .modal-lg { max-width: 640px; }
+.modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+.modal-header h4 { font-family: var(--font-title); font-size: var(--title-h6); line-height: var(--lh-h6); }
+.modal-body { margin-bottom: var(--space-lg); font-size: 14px; color: var(--color-muted-foreground); line-height: 1.43; }
+.modal-footer { display: flex; justify-content: flex-end; gap: var(--space-lg); }
+
+/* ── tabs ── */
+.tabs { max-width: 640px; }
+.tabs-list { display: flex; border-bottom: 1px solid var(--color-border); position: relative; }
+.tabs-trigger {
+  padding: 8px 12px; font-size: 16px; font-weight: 500; letter-spacing: -0.011em;
+  background: none; border: none; cursor: pointer; color: var(--color-muted-foreground);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.tabs-trigger:hover { color: var(--color-foreground); }
+.tabs-trigger[aria-selected="true"] { color: var(--color-foreground); }
+.tabs-indicator { position: absolute; bottom: -1px; height: 2px; background: var(--color-primary); transition: transform var(--duration-smooth) var(--ease-out), width var(--duration-smooth) var(--ease-out); left: 0; }
+.tabs-panel { padding-top: var(--space-lg); font-size: 14px; line-height: 1.43; color: var(--color-muted-foreground); max-width: 560px; }
+.tabs-panel[hidden] { display: none; }
+
+/* ── table ── */
+.table-wrap { border: 1px solid var(--color-border); overflow-x: auto; background: var(--color-background); }
+table.ds { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.ds th { text-align: left; padding: 12px 16px; font-size: 14px; font-weight: 500; color: var(--color-muted-foreground); border-bottom: 1px solid var(--color-border); letter-spacing: -0.006em; white-space: nowrap; }
+table.ds td { padding: 12px 16px; font-size: 14px; font-weight: 400; border-bottom: 1px solid var(--color-border); color: var(--color-foreground); }
+table.ds th.num, table.ds td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.ds tbody tr:last-child td { border-bottom: none; }
+table.ds.sortable th[aria-sort] { cursor: pointer; }
+table.ds tbody tr.row-hover { cursor: pointer; transition: background-color var(--duration-fast) var(--ease-out); }
+table.ds tbody tr.row-hover:hover { background: var(--color-muted); }
+table.ds tbody tr.selected { background: rgba(26,94,255,0.04); }
+table.ds .empty { text-align: center; color: var(--color-muted-foreground); padding: var(--space-2xl) 16px; }
+table.ds .sort-ind { display: inline-block; margin-left: var(--space-xs); opacity: 0.6; }
+.skeleton { height: 14px; background: var(--color-muted); animation: pulse var(--duration-fast) var(--ease-in-out) infinite alternate; }
+@keyframes pulse { from { opacity: 1; } to { opacity: 0.45; } }
+
+/* ── showcase helpers ── */
+.preview-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-lg); margin-bottom: var(--space-md); }
+.preview-block { border: 1px solid var(--color-border); padding: var(--space-xl); margin-bottom: var(--space-lg); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-lg); background: var(--color-background); }
+.preview-block.col { flex-direction: column; align-items: stretch; }
+.spec-table { width: 100%; border: 1px solid var(--color-border); border-collapse: collapse; font-size: 14px; margin-bottom: var(--space-xl); }
+.spec-table th { text-align: left; padding: 12px 16px; font-weight: 500; color: var(--color-muted-foreground); border-bottom: 1px solid var(--color-border); font-size: 14px; }
+.spec-table td { padding: 12px 16px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td:first-child { font-weight: 500; white-space: nowrap; }
+.spec-table code { font-size: 13px; }
+.rules-list { list-style: none; display: flex; flex-direction: column; gap: var(--space-sm); }
+.rules-list li { font-size: 14px; line-height: 1.43; padding-left: var(--space-lg); position: relative; color: var(--color-foreground); }
+.rules-list li::before { content: "—"; position: absolute; left: 0; color: var(--color-muted-foreground); }
+.rules-list li b, .rules-list li strong { font-weight: 500; }
+.note { font-size: 14px; color: var(--color-muted-foreground); line-height: 1.43; margin-top: var(--space-sm); }
+
+/* color swatches */
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-lg); }
+.swatch { border: 1px solid var(--color-border); }
+.swatch .chip { height: 72px; }
+.swatch .meta { padding: var(--space-md) var(--space-lg); }
+.swatch .meta .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); }
+.swatch .meta .t { font-size: 14px; font-weight: 500; }
+.swatch .meta .hex { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--color-muted-foreground); }
+.swatch .meta .role { font-size: 12px; color: var(--color-muted-foreground); margin-top: var(--space-xs); line-height: 1.33; }
+
+/* type scale rows */
+.type-row { display: grid; grid-template-columns: 140px 1fr; gap: var(--space-lg); align-items: baseline; padding: var(--space-md) 0; border-bottom: 1px solid var(--color-border); }
+.type-row:last-child { border-bottom: none; }
+.type-row .lbl { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--color-muted-foreground); }
+.type-row .sample { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* spacing bars */
+.space-row { display: grid; grid-template-columns: 100px 1fr; gap: var(--space-lg); align-items: center; padding: var(--space-sm) 0; }
+.space-row .lbl { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--color-muted-foreground); }
+.space-row .bar { height: 24px; background: var(--color-primary); opacity: 0.85; }
+
+/* elevation demo */
+.elev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-xl); }
+.elev-card { padding: var(--space-xl); background: var(--color-background); }
+.elev-card.subtle { box-shadow: var(--shadow-subtle); border: none; }
+.elev-card.elevated { box-shadow: var(--shadow-elevated); border: none; }
+.elev-card.plain { border: 1px solid var(--color-border); }
+
+/* checklist */
+.checklist { list-style: none; display: flex; flex-direction: column; gap: var(--space-sm); max-width: 640px; }
+.checklist li { font-size: 14px; line-height: 1.43; padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-border); }
+.checklist li::before { content: "✓"; margin-right: var(--space-sm); color: var(--color-primary); font-weight: 500; }
+
+/* hamburger (mobile) */
+.hamburger { display: none; position: fixed; top: var(--space-md); left: var(--space-md); z-index: 80; }
+.mobile-backdrop { display: none; position: fixed; inset: 0; background: rgba(26,26,26,0.4); z-index: 70; }
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; transform: translateX(-100%); transition: transform var(--duration-smooth) var(--ease-out); z-index: 75; }
+  .sidebar.open { transform: none; }
+  .mobile-backdrop.show { display: block; }
+  .hamburger { display: inline-flex; }
+  .main { padding: var(--space-3xl) var(--space-xl); }
+  h1 { font-size: var(--title-h4); }
+}
+</style>
+</head><body>
+<button class="btn btn-ghost btn-icon hamburger" id="hamburger" aria-label="Open navigation" aria-expanded="false">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+</button>
+<div class="mobile-backdrop" id="mobileBackdrop"></div>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR (live Sidebar contract) ── -->
+  <nav class="sidebar" id="sidebar" aria-label="Main">
+    <div class="sidebar-header">
+      <div class="brand">
+        <span class="monogram">d</span>
+        <span class="name">ds4a</span>
+      </div>
+      <div class="tag">Design System for Agents</div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">Overview</div>
+        <a class="sidebar-item active" href="#overview" data-view="overview">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+          Welcome
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">Foundations</div>
+        <a class="sidebar-item" href="#colors" data-view="colors">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/></svg>
+          Colors
+        </a>
+        <a class="sidebar-item" href="#typography" data-view="typography">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M8 4v9"/></svg>
+          Typography
+        </a>
+        <a class="sidebar-item" href="#spacing" data-view="spacing">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10"/><path d="M5 3v10M11 3v10"/></svg>
+          Spacing
+        </a>
+        <a class="sidebar-item" href="#radius" data-view="radius">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="10" height="10"/></svg>
+          Radius
+        </a>
+        <a class="sidebar-item" href="#elevation" data-view="elevation">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l6 4-6 4-6-4 6-4z"/><path d="M2 10l6 4 6-4"/></svg>
+          Elevation
+        </a>
+        <a class="sidebar-item" href="#motion" data-view="motion">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 8l3-3"/></svg>
+          Motion
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">Components</div>
+        <a class="sidebar-item" href="#button" data-view="button">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="12" height="6"/><path d="M6 8h4"/></svg>
+          Button
+        </a>
+        <a class="sidebar-item" href="#input" data-view="input">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="8"/><path d="M5 8h6"/></svg>
+          Input
+        </a>
+        <a class="sidebar-item" href="#card" data-view="card">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10"/><path d="M2 7h12"/></svg>
+          Card
+        </a>
+        <a class="sidebar-item" href="#badge" data-view="badge">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="10" height="5"/><path d="M5 8h6"/></svg>
+          Badge
+        </a>
+        <a class="sidebar-item" href="#field" data-view="field">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg>
+          Field
+        </a>
+        <a class="sidebar-item" href="#form" data-view="form">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10M3 8h10M3 13h10"/><circle cx="3" cy="3" r="1.2" fill="currentColor"/><circle cx="3" cy="8" r="1.2" fill="currentColor"/><circle cx="3" cy="13" r="1.2" fill="currentColor"/></svg>
+          Fieldset &amp; Form
+        </a>
+        <a class="sidebar-item" href="#select" data-view="select">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="8"/><path d="M6 8l2 2 2-2"/></svg>
+          Select
+        </a>
+        <a class="sidebar-item" href="#radiogroup" data-view="radiogroup">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="4" r="2"/><circle cx="8" cy="12" r="2"/><path d="M8 6v4"/></svg>
+          RadioGroup
+        </a>
+        <a class="sidebar-item" href="#modal" data-view="modal">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="10" height="10"/><path d="M6 6l4 4M10 6l-4 4"/></svg>
+          Modal
+        </a>
+        <a class="sidebar-item" href="#tabs" data-view="tabs">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M6 4v10M10 4v10"/></svg>
+          Tabs
+        </a>
+        <a class="sidebar-item" href="#table" data-view="table">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10"/><path d="M2 7h12M2 11h12"/></svg>
+          Table
+        </a>
+        <a class="sidebar-item" href="#sidebar" data-view="sidebar">
+          <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12"/><path d="M6 2v12"/></svg>
+          Sidebar
+        </a>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span>benchmark core</span>
+      <span class="v">13 components</span>
+    </div>
+  </nav>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- VIEW: OVERVIEW -->
+    <section class="view active" id="view-overview" aria-labelledby="h1-overview">
+      <div class="view-head">
+        <div class="kicker">Overview</div>
+        <h1 id="h1-overview">A portable taste layer for AI coding agents.</h1>
+        <p class="lede">13 benchmark-backed component contracts. Warm white, sharp edges, blue accent, 4px grid. This page is built with the system it documents — the sidebar you're using is the Sidebar contract, live.</p>
+      </div>
+
+      <div class="sect">
+        <h2><span class="n">01</span>How to read this preview</h2>
+        <ul class="rules-list">
+          <li>Every value on this page comes from <code>references/master-library.md</code> — no invented numbers.</li>
+          <li>Each component view shows: live preview → spec table → key rules.</li>
+          <li>The showcase obeys its own pre-flight checklist: one H1 per view, one primary action per view, 0px radius everywhere, 4px spacing grid.</li>
+          <li>Contrast is AA-verified: <code>foreground</code> 16.9:1, <code>muted-foreground</code> 2.6:1 (decorative/placeholder only), <code>primary on white</code> 4.6:1.</li>
+        </ul>
+      </div>
+
+      <div class="sect">
+        <h2><span class="n">02</span>Foundations</h2>
+        <p class="note" style="margin-bottom:16px">The token layer every component reads from. No component hardcodes a value.</p>
+        <div class="preview-row">
+          <div class="card" style="flex:1;min-width:240px">
+            <h4>9 semantic colors</h4>
+            <p>Named by intent, not appearance. <code>color.primary</code> — not <code>color.blue</code>.</p>
+          </div>
+          <div class="card" style="flex:1;min-width:240px">
+            <h4>16 type tokens</h4>
+            <p>Fauna One titles, Inter labels + paragraphs. Three categories, clear jobs.</p>
+          </div>
+          <div class="card" style="flex:1;min-width:240px">
+            <h4>4px base grid</h4>
+            <p>Eight spacing steps, xs 4px → 4xl 64px. No invented values.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sect">
+        <h2><span class="n">03</span>Pre-flight checklist</h2>
+        <ul class="checklist">
+          <li>One primary action per view</li>
+          <li>Spacing follows 4px grid — no invented values</li>
+          <li>Semantic tokens in markup — no raw hex</li>
+          <li>WCAG AA — all text passes 4.5:1</li>
+          <li>H1 appears once per view</li>
+          <li>Radius 0px — sharp aesthetic, deliberate</li>
+          <li>Shadows for elevation only, max 8% opacity</li>
+          <li>Typography categories respected — no mixing</li>
+          <li>Disabled states use opacity, never color change</li>
+          <li>Borders separate content — never decorate</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: COLORS -->
+    <section class="view" id="view-colors" aria-labelledby="h1-colors">
+      <div class="view-head">
+        <div class="kicker">Foundations</div>
+        <h1 id="h1-colors">Colors</h1>
+        <p class="lede">Nine semantic tokens. Use by intent, never by value — the name encodes what the color is for.</p>
+      </div>
+      <div class="sect">
+        <div class="swatch-grid">
+          <div class="swatch"><div class="chip" style="background:#FDFCF8;border-bottom:1px solid #E5E2D9"></div><div class="meta"><div class="row1"><span class="t">background</span><span class="hex">#FDFCF8</span></div><div class="role">Main canvas. Warm white. Never pure white.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#1A1A1A"></div><div class="meta"><div class="row1"><span class="t">foreground</span><span class="hex">#1A1A1A</span></div><div class="role">Primary text. Near-black, not pure black.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#A1A1A1"></div><div class="meta"><div class="row1"><span class="t">secondary</span><span class="hex">#A1A1A1</span></div><div class="role">Secondary gray. Mid-tone for subtle elements.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#F3F1EB"></div><div class="meta"><div class="row1"><span class="t">muted</span><span class="hex">#F3F1EB</span></div><div class="role">Subtle background. Sections, cards, hover states.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#E5E2D9"></div><div class="meta"><div class="row1"><span class="t">border</span><span class="hex">#E5E2D9</span></div><div class="role">Separating content only. Never decorative.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#A1A1A1"></div><div class="meta"><div class="row1"><span class="t">muted-foreground</span><span class="hex">#A1A1A1</span></div><div class="role">Secondary text, placeholders. Calibrated for AA.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#1A5EFF"></div><div class="meta"><div class="row1"><span class="t">primary</span><span class="hex">#1A5EFF</span></div><div class="role">Blue. CTAs and active states only.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#FFFFFF;border-bottom:1px solid #E5E2D9"></div><div class="meta"><div class="row1"><span class="t">primary-foreground</span><span class="hex">#FFFFFF</span></div><div class="role">Text on primary. White for AA on blue.</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#C73E3E"></div><div class="meta"><div class="row1"><span class="t">destructive</span><span class="hex">#C73E3E</span></div><div class="role">Errors and destructive actions only.</div></div></div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Rules</h2>
+        <ul class="rules-list">
+          <li><strong>primary is for CTAs and active states only.</strong> Not decoration, not large surfaces, not borders.</li>
+          <li><strong>destructive is for errors and destructive actions only.</strong> Never for emphasis.</li>
+          <li><strong>background is warm white, never <code>#FFFFFF</code>.</strong> The warmth reduces eye strain.</li>
+          <li><strong>border separates content.</strong> If a border doesn't separate two distinct areas, it doesn't exist.</li>
+          <li><strong>Semantic naming over appearance.</strong> <code>color.primary</code>, not <code>color.blue</code> — the name encodes intent.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: TYPOGRAPHY -->
+    <section class="view" id="view-typography" aria-labelledby="h1-typography">
+      <div class="view-head">
+        <div class="kicker">Foundations</div>
+        <h1 id="h1-typography">Typography</h1>
+        <p class="lede">Two typefaces, three categories. Fauna One gives titles weight and character; Inter does everything else.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Titles · Fauna One, Medium 500</h2>
+        <div>
+          <div class="type-row"><span class="lbl">title-h1 · 56px</span><span class="sample" style="font-family:var(--font-title);font-size:56px;font-weight:500;line-height:0.96;letter-spacing:-0.01em">Precision</span></div>
+          <div class="type-row"><span class="lbl">title-h2 · 48px</span><span class="sample" style="font-family:var(--font-title);font-size:48px;font-weight:500;line-height:1.17;letter-spacing:-0.01em">Precision</span></div>
+          <div class="type-row"><span class="lbl">title-h3 · 40px</span><span class="sample" style="font-family:var(--font-title);font-size:40px;font-weight:500;line-height:1.2;letter-spacing:-0.01em">Precision</span></div>
+          <div class="type-row"><span class="lbl">title-h4 · 32px</span><span class="sample" style="font-family:var(--font-title);font-size:32px;font-weight:500;line-height:1.25;letter-spacing:-0.005em">Precision</span></div>
+          <div class="type-row"><span class="lbl">title-h5 · 24px</span><span class="sample" style="font-family:var(--font-title);font-size:24px;font-weight:500;line-height:1.33">Precision</span></div>
+          <div class="type-row"><span class="lbl">title-h6 · 20px</span><span class="sample" style="font-family:var(--font-title);font-size:20px;font-weight:500;line-height:1.4">Precision</span></div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Labels · Inter, Medium 500</h2>
+        <div>
+          <div class="type-row"><span class="lbl">label-xl · 24px</span><span class="sample" style="font-size:24px;font-weight:500;letter-spacing:-0.015em">Button text · Field label</span></div>
+          <div class="type-row"><span class="lbl">label-lg · 18px</span><span class="sample" style="font-size:18px;font-weight:500;letter-spacing:-0.015em">Button text · Field label</span></div>
+          <div class="type-row"><span class="lbl">label-md · 16px</span><span class="sample" style="font-size:16px;font-weight:500;letter-spacing:-0.011em">Button text · Field label</span></div>
+          <div class="type-row"><span class="lbl">label-sm · 14px</span><span class="sample" style="font-size:14px;font-weight:500;letter-spacing:-0.006em">Button text · Field label</span></div>
+          <div class="type-row"><span class="lbl">label-xs · 12px</span><span class="sample" style="font-size:12px;font-weight:500">Metadata · Badges</span></div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Paragraphs · Inter, Regular 400</h2>
+        <div>
+          <div class="type-row"><span class="lbl">paragraph-xl · 24px</span><span class="sample" style="font-size:24px;font-weight:400;letter-spacing:-0.015em">Body text and descriptions</span></div>
+          <div class="type-row"><span class="lbl">paragraph-lg · 18px</span><span class="sample" style="font-size:18px;font-weight:400;letter-spacing:-0.015em">Body text and descriptions</span></div>
+          <div class="type-row"><span class="lbl">paragraph-md · 16px</span><span class="sample" style="font-size:16px;font-weight:400;letter-spacing:-0.011em">Body text and descriptions</span></div>
+          <div class="type-row"><span class="lbl">paragraph-sm · 14px</span><span class="sample" style="font-size:14px;font-weight:400;letter-spacing:-0.006em">Body text and descriptions</span></div>
+          <div class="type-row"><span class="lbl">paragraph-xs · 12px</span><span class="sample" style="font-size:12px;font-weight:400">Fine print</span></div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Rules</h2>
+        <ul class="rules-list">
+          <li><strong>H1 appears once per page.</strong> No exceptions.</li>
+          <li><strong>Labels are not content.</strong> Label tokens for buttons, field labels, badges — never for paragraphs.</li>
+          <li><strong>Fauna One for titles only.</strong> Never body, labels, or UI text.</li>
+          <li><strong>Default emphasis is Medium 500.</strong> Bold 700 only for critical warnings.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: SPACING -->
+    <section class="view" id="view-spacing" aria-labelledby="h1-spacing">
+      <div class="view-head">
+        <div class="kicker">Foundations</div>
+        <h1 id="h1-spacing">Spacing</h1>
+        <p class="lede">4px base unit. Everything is a multiple of four. No invented values.</p>
+      </div>
+      <div class="sect">
+        <div>
+          <div class="space-row"><span class="lbl">xs · 4px</span><div><div class="bar" style="width:4px"></div></div></div>
+          <div class="space-row"><span class="lbl">sm · 8px</span><div><div class="bar" style="width:8px"></div></div></div>
+          <div class="space-row"><span class="lbl">md · 12px</span><div><div class="bar" style="width:12px"></div></div></div>
+          <div class="space-row"><span class="lbl">lg · 16px</span><div><div class="bar" style="width:16px"></div></div></div>
+          <div class="space-row"><span class="lbl">xl · 24px</span><div><div class="bar" style="width:24px"></div></div></div>
+          <div class="space-row"><span class="lbl">2xl · 32px</span><div><div class="bar" style="width:32px"></div></div></div>
+          <div class="space-row"><span class="lbl">3xl · 48px</span><div><div class="bar" style="width:48px"></div></div></div>
+          <div class="space-row"><span class="lbl">4xl · 64px</span><div><div class="bar" style="width:64px"></div></div></div>
+        </div>
+        <p class="note">This page is built entirely on the scale — gap between sidebar items is md (12px), card padding xl (24px), section separation 2xl (32px).</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Rules</h2>
+        <ul class="rules-list">
+          <li><strong>Minimum space between sections: 24px (xl).</strong> Never less.</li>
+          <li><strong>Cards use xl padding by default.</strong> Flush variant uses 0.</li>
+          <li><strong>Forms use xl gap between fields.</strong> Fields use sm gap internally.</li>
+          <li><strong>Use gaps, not margins.</strong> Flex/grid gap — no margin collapse.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: RADIUS -->
+    <section class="view" id="view-radius" aria-labelledby="h1-radius">
+      <div class="view-head">
+        <div class="kicker">Foundations</div>
+        <h1 id="h1-radius">Radius</h1>
+        <p class="lede">All radius values are 0px. This is deliberate, not missing.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-block">
+          <div style="text-align:center">
+            <div style="width:96px;height:96px;background:var(--color-muted);border:1px solid var(--color-border);border-radius:0;display:flex;align-items:center;justify-content:center;margin:0 auto 8px"><span style="font-size:12px;font-weight:500">0px</span></div>
+            <span style="font-size:12px;color:var(--color-muted-foreground)">xs → full, every step</span>
+          </div>
+          <div style="text-align:center">
+            <div style="width:96px;height:96px;background:var(--color-muted);border:1px solid var(--color-border);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px"><span style="font-size:12px;font-weight:500">50%</span></div>
+            <span style="font-size:12px;color:var(--color-muted-foreground)">Only for radio indicators</span>
+          </div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Why sharp</h2>
+        <ul class="rules-list">
+          <li><strong>Sharp edges convey precision and confidence.</strong> Rounded softens and casualizes — architectural drawings, technical documents, precision instruments.</li>
+          <li><strong>Don't mix radius values.</strong> No 4px or 8px "for variety." The consistency is the point.</li>
+          <li><strong>50% is reserved for radio indicators.</strong> Not avatars, not badges, not buttons.</li>
+          <li><strong>Override framework defaults.</strong> Tailwind's rounded-md is 6px — set 0px explicitly.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: ELEVATION -->
+    <section class="view" id="view-elevation" aria-labelledby="h1-elevation">
+      <div class="view-head">
+        <div class="kicker">Foundations</div>
+        <h1 id="h1-elevation">Elevation</h1>
+        <p class="lede">Two shadows, functional only. If a shadow is visible, it's too heavy.</p>
+      </div>
+      <div class="sect">
+        <div class="elev-grid">
+          <div class="elev-card subtle">
+            <h4>shadow.subtle</h4>
+            <p style="font-size:14px;color:var(--color-muted-foreground);margin-top:8px"><code>0 1px 2px rgba(0,0,0,0.04)</code><br>Cards, default elevation. Barely visible.</p>
+          </div>
+          <div class="elev-card elevated">
+            <h4>shadow.elevated</h4>
+            <p style="font-size:14px;color:var(--color-muted-foreground);margin-top:8px"><code>0 4px 8px rgba(0,0,0,0.08)</code><br>Popovers, dropdowns, modals.</p>
+          </div>
+          <div class="elev-card plain">
+            <h4>border (no shadow)</h4>
+            <p style="font-size:14px;color:var(--color-muted-foreground);margin-top:8px"><code>1px solid color.border</code><br>Separation without elevation. Pick one signal.</p>
+          </div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Rules</h2>
+        <ul class="rules-list">
+          <li><strong>Shadows mean elevation, never decoration.</strong> If the element isn't above content, no shadow.</li>
+          <li><strong>Max opacity 8%.</strong> Heavy shadow → reduce opacity, don't remove.</li>
+          <li><strong>Border OR shadow, never both</strong> for the same purpose on one element.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: MOTION -->
+    <section class="view" id="view-motion" aria-labelledby="h1-motion">
+      <div class="view-head">
+        <div class="kicker">Foundations</div>
+        <h1 id="h1-motion">Motion</h1>
+        <p class="lede">Two durations, two easings. Feedback is fast, transitions are smooth.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-block col" style="max-width:560px">
+          <div style="display:flex;align-items:center;gap:24px">
+            <button class="btn btn-primary btn-md" id="motion-btn">duration.fast · 150ms</button>
+            <span style="font-size:14px;color:var(--color-muted-foreground)">Hover me — instant response</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:24px">
+            <button class="btn btn-secondary btn-md" data-modal-open="modal-motion">duration.smooth · 300ms</button>
+            <span style="font-size:14px;color:var(--color-muted-foreground)">Opens a modal — content transition</span>
+          </div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Tokens</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th><th>Use for</th></tr>
+          <tr><td><code>duration.fast</code></td><td>150ms</td><td>Button press, toggle, hover feedback</td></tr>
+          <tr><td><code>duration.smooth</code></td><td>300ms</td><td>Page transitions, modals, dropdowns</td></tr>
+          <tr><td><code>ease.out</code></td><td><code>cubic-bezier(0.16,1,0.3,1)</code></td><td>Default. Natural deceleration.</td></tr>
+          <tr><td><code>ease.in-out</code></td><td><code>cubic-bezier(0.65,0,0.35,1)</code></td><td>Symmetric: open/close, expand/collapse</td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Never animate layout properties</strong> (width, height, padding) — transform and opacity only.</li>
+          <li><strong>Feedback is fast (150ms), transitions are smooth (300ms).</strong> Don't swap them.</li>
+        </ul>
+      </div>
+    </section>    <!-- VIEW: BUTTON -->
+    <section class="view" id="view-button" aria-labelledby="h1-button">
+      <div class="view-head">
+        <div class="kicker">Components · 01</div>
+        <h1 id="h1-button">Button</h1>
+        <p class="lede">Three variants, three sizes. Label typography, Medium 500. One primary per section — the most important action.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Variants</h2>
+        <div class="preview-block">
+          <button class="btn btn-primary btn-md">Deploy</button>
+          <button class="btn btn-secondary btn-md">Save draft</button>
+          <button class="btn btn-ghost btn-md">Cancel</button>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Sizes</h2>
+        <div class="preview-block" style="align-items:flex-end">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><button class="btn btn-primary btn-sm">Deploy</button><span style="font-size:12px;color:var(--color-muted-foreground)">sm</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><button class="btn btn-primary btn-md">Deploy</button><span style="font-size:12px;color:var(--color-muted-foreground)">md</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><button class="btn btn-primary btn-lg">Deploy</button><span style="font-size:12px;color:var(--color-muted-foreground)">lg</span></div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>States</h2>
+        <div class="preview-block">
+          <button class="btn btn-primary btn-md" disabled>Disabled</button>
+          <button class="btn btn-primary btn-md">Hover: darken</button>
+          <span style="font-size:14px;color:var(--color-muted-foreground)">Focus: 2px primary outline, offset 2px — press Tab</span>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>radius</td><td><code>0px</code></td></tr>
+          <tr><td>padding-sm / md / lg</td><td><code>8px 12px</code> · <code>10px 16px</code> · <code>12px 24px</code></td></tr>
+          <tr><td>font-size sm / md / lg</td><td>14px · 16px · 24px</td></tr>
+          <tr><td>font-weight</td><td>500 (label tokens)</td></tr>
+          <tr><td>icon gap</td><td><code>8px</code></td></tr>
+          <tr><td>variants</td><td><code>primary, secondary, ghost</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>One primary per section.</strong> If everything is primary, nothing is.</li>
+          <li><strong>Ghost = transparent</strong>, border appears on hover. Tertiary actions only.</li>
+          <li><strong>Disabled = opacity 0.5 + pointer-events none.</strong> Never a color change.</li>
+          <li><strong>Transitions: 150ms ease-out</strong> on background, border, filter.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: INPUT -->
+    <section class="view" id="view-input" aria-labelledby="h1-input">
+      <div class="view-head">
+        <div class="kicker">Components · 02</div>
+        <h1 id="h1-input">Input</h1>
+        <p class="lede">Paragraph typography, Regular 400. Border separates; placeholder passes AA.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Sizes</h2>
+        <div class="preview-block col" style="max-width:420px">
+          <input class="input input-sm" placeholder="sm — 14px">
+          <input class="input input-md" placeholder="md — 16px (default)">
+          <input class="input input-lg" placeholder="lg — 24px">
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Variants &amp; states</h2>
+        <div class="preview-block col" style="max-width:420px">
+          <input class="input input-md" value="Default — filled">
+          <input class="input input-error input-md" value="Error — destructive border">
+          <input class="input input-md" placeholder="Disabled" disabled>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>radius</td><td><code>0px</code></td></tr>
+          <tr><td>padding sm / md / lg</td><td><code>8px 12px</code> · <code>12px 16px</code> · <code>16px 24px</code></td></tr>
+          <tr><td>border</td><td><code>1px solid var(--color-border)</code></td></tr>
+          <tr><td>placeholder</td><td><code>color.muted-foreground</code> — AA</td></tr>
+          <tr><td>variants</td><td><code>default, error</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Width 100% of parent.</strong> Control width via the container, not the input.</li>
+          <li><strong>Error: border + focus ring use destructive.</strong></li>
+          <li><strong>Input text is paragraph (400)</strong>, never label (500).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: CARD -->
+    <section class="view" id="view-card" aria-labelledby="h1-card">
+      <div class="view-head">
+        <div class="kicker">Components · 03</div>
+        <h1 id="h1-card">Card</h1>
+        <p class="lede">A surface, not a button. Always bordered, sharp, no hover.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-row">
+          <div class="card" style="flex:1;min-width:240px">
+            <h4>default</h4>
+            <p>Border 1px, shadow subtle, padding xl. The standard content card.</p>
+          </div>
+          <div class="card card-elevated" style="flex:1;min-width:240px">
+            <h4>elevated</h4>
+            <p>Shadow elevated, no border. For popovers and floating content.</p>
+          </div>
+          <div class="card card-flush" style="flex:1;min-width:240px">
+            <div class="media"></div>
+            <div class="body">
+              <h4>flush</h4>
+              <p>Padding 0. Media cards — content manages its own spacing.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>radius</td><td><code>0px</code></td></tr>
+          <tr><td>padding</td><td><code>24px (xl)</code> — flush: 0</td></tr>
+          <tr><td>border</td><td><code>1px solid var(--color-border)</code></td></tr>
+          <tr><td>variants</td><td><code>default, elevated, flush</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>No hover state.</strong> Cards are surfaces. Need a click? Wrap with a button or add a clickable child.</li>
+          <li><strong>Elevated = shadow, no border.</strong> One elevation signal, never both.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: BADGE -->
+    <section class="view" id="view-badge" aria-labelledby="h1-badge">
+      <div class="view-head">
+        <div class="kicker">Components · 04</div>
+        <h1 id="h1-badge">Badge</h1>
+        <p class="lede">Inline-flex, never block. Content never wraps.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-block">
+          <span class="badge badge-default"><span class="dot"></span>Draft</span>
+          <span class="badge badge-primary"><span class="dot"></span>Active</span>
+          <span class="badge badge-destructive"><span class="dot"></span>Failed</span>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>padding</td><td><code>4px 8px</code></td></tr>
+          <tr><td>font</td><td><code>label-xs · 12px · 500</code></td></tr>
+          <tr><td>gap</td><td><code>4px</code></td></tr>
+          <tr><td>variants</td><td><code>default, primary, destructive</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>primary badge = active/positive only.</strong> Not a decoration.</li>
+          <li><strong>Badges sit inline with text</strong> — <code>white-space: nowrap</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: FIELD -->
+    <section class="view" id="view-field" aria-labelledby="h1-field">
+      <div class="view-head">
+        <div class="kicker">Components · 05</div>
+        <h1 id="h1-field">Field</h1>
+        <p class="lede">Label, control, description, error — grouped with an accessible association.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-block col" style="max-width:420px">
+          <div class="field">
+            <label class="field-label" for="f-workspace">Workspace name</label>
+            <input class="input input-md" id="f-workspace" placeholder="acme-inc">
+            <p class="field-desc">Lowercase letters, numbers, and dashes.</p>
+          </div>
+          <div class="field" data-invalid>
+            <label class="field-label" for="f-email">Email</label>
+            <input class="input input-md input-error" id="f-email" value="not-an-email" aria-describedby="f-email-err" aria-invalid="true">
+            <p class="field-error" id="f-email-err" aria-live="polite">Enter a valid email address.</p>
+          </div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Part</th><th>Element</th><th>Purpose</th></tr>
+          <tr><td><code>Field.Root</code></td><td><code>&lt;div&gt;</code></td><td>Groups all parts. Carries <code>data-invalid</code>.</td></tr>
+          <tr><td><code>Field.Label</code></td><td><code>&lt;label&gt;</code></td><td>Accessible, auto-associated. label-sm.</td></tr>
+          <tr><td><code>Field.Control</code></td><td><code>&lt;input&gt;</code></td><td>Styled as Input.</td></tr>
+          <tr><td><code>Field.Description</code></td><td><code>&lt;p&gt;</code></td><td>Helper text. paragraph-sm, muted.</td></tr>
+          <tr><td><code>Field.Error</code></td><td><code>&lt;div&gt;</code></td><td>Destructive, <code>aria-live</code>.</td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Gap between parts: 8px (sm).</strong></li>
+          <li><strong>Invalid = <code>data-invalid</code> on root</strong>, control border turns destructive.</li>
+          <li><strong>Error messages announce themselves</strong> via aria-live.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: FORM -->
+    <section class="view" id="view-form" aria-labelledby="h1-form">
+      <div class="view-head">
+        <div class="kicker">Components · 06</div>
+        <h1 id="h1-form">Fieldset &amp; Form</h1>
+        <p class="lede">Groups with a shared legend; consolidated validation on submit.</p>
+      </div>
+      <div class="sect">
+        <form class="form" id="demo-form" novalidate style="max-width:420px">
+          <fieldset class="fieldset" style="gap:12px">
+            <legend>Project details</legend>
+            <div class="field">
+              <label class="field-label" for="fm-name">Project name</label>
+              <input class="input input-md" id="fm-name" placeholder="My portfolio" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="fm-url">Repository URL</label>
+              <input class="input input-md" id="fm-url" type="url" placeholder="https://github.com/…" required>
+              <p class="field-desc">GitHub, GitLab, or any public repo.</p>
+            </div>
+          </fieldset>
+          <div style="display:flex;gap:16px">
+            <button type="submit" class="btn btn-primary btn-md">Create project</button>
+            <button type="button" class="btn btn-ghost btn-md">Cancel</button>
+          </div>
+        </form>
+        <p class="note" id="form-result" aria-live="polite" style="min-height:20px"></p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>form gap</td><td><code>24px (xl)</code> between fields</td></tr>
+          <tr><td>fieldset gap</td><td><code>12px (md)</code> between controls</td></tr>
+          <tr><td>legend</td><td><code>label-md · 16px · 500</code></td></tr>
+          <tr><td>validation</td><td><code>onSubmit</code> (default), onBlur, onChange</td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Fieldset is a clean wrapper</strong> — no border, no padding, no margin.</li>
+          <li><strong>One primary per form</strong> — the submit.</li>
+          <li><strong>Try submitting empty above</strong> — validation fires, errors announce.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: SELECT -->
+    <section class="view" id="view-select" aria-labelledby="h1-select">
+      <div class="view-head">
+        <div class="kicker">Components · 07</div>
+        <h1 id="h1-select">Select</h1>
+        <p class="lede">Trigger styled as Input, popup elevated, keyboard navigable.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-block">
+          <div class="select" id="demo-select">
+            <button class="select-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="value">Weekly</span>
+              <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4"/></svg>
+            </button>
+            <div class="select-popup" role="listbox" aria-label="Frequency">
+              <div class="select-item" role="option" data-value="Daily"><span class="ind"></span>Daily</div>
+              <div class="select-item selected" role="option" aria-selected="true" data-value="Weekly"><span class="ind"></span>Weekly</div>
+              <div class="select-item" role="option" data-value="Monthly"><span class="ind"></span>Monthly</div>
+              <div class="select-item disabled" role="option" aria-disabled="true" data-value="Yearly"><span class="ind"></span>Yearly (legacy)</div>
+            </div>
+          </div>
+          <span style="font-size:14px;color:var(--color-muted-foreground)">Click, or Tab + arrow keys. Esc closes.</span>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>trigger</td><td>Input styling · <code>12px 16px</code> · paragraph-md</td></tr>
+          <tr><td>popup</td><td><code>shadow.elevated</code> · padding 4px · max-height 280px</td></tr>
+          <tr><td>chevron</td><td>rotates 180° open · <code>duration.fast</code></td></tr>
+          <tr><td>selected indicator</td><td>6px primary dot</td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Keyboard: arrows navigate, Enter selects, Esc closes.</strong></li>
+          <li><strong>Highlighted item = muted background</strong>; selected = 500 weight + blue dot.</li>
+          <li><strong>Disabled options: opacity 0.5, pointer-events none.</strong></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: RADIOGROUP -->
+    <section class="view" id="view-radiogroup" aria-labelledby="h1-radio">
+      <div class="view-head">
+        <div class="kicker">Components · 08</div>
+        <h1 id="h1-radio">RadioGroup</h1>
+        <p class="lede">Two faces: inline Radio for tight lists, RadioCard when options need descriptions.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Radio (inline)</h2>
+        <div class="radio-group" role="radiogroup" aria-label="Deploy target">
+          <label class="radio"><input type="radio" name="target" checked><span class="indicator"></span>Production</label>
+          <label class="radio"><input type="radio" name="target"><span class="indicator"></span>Staging</label>
+          <label class="radio"><input type="radio" name="target"><span class="indicator"></span>Preview</label>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>RadioCard</h2>
+        <div class="radio-group" role="radiogroup" aria-label="Framework">
+          <label class="radio-card"><input type="radio" name="framework" checked><span class="indicator"></span><span><span class="t">Astro</span><span class="d" style="display:block">Content-first, zero JS by default.</span></span></label>
+          <label class="radio-card"><input type="radio" name="framework"><span class="indicator"></span><span><span class="t">Next.js</span><span class="d" style="display:block">App Router, React server components.</span></span></label>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>group gap</td><td><code>8px (sm)</code> · vertical</td></tr>
+          <tr><td>Radio indicator</td><td>16px circle, 2px border, 8px dot</td></tr>
+          <tr><td>RadioCard</td><td>padding <code>16px</code>, gap <code>16px</code>, indicator 18px</td></tr>
+          <tr><td>checked tint</td><td><code>rgba(26,94,255,0.04)</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Hover → primary border.</strong> Checked → primary border + dot.</li>
+          <li><strong>Circles are only for radios</strong> — the one 50% radius in the system.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: MODAL -->
+    <section class="view" id="view-modal" aria-labelledby="h1-modal">
+      <div class="view-head">
+        <div class="kicker">Components · 09</div>
+        <h1 id="h1-modal">Modal</h1>
+        <p class="lede">Focused overlay. Shadow separates — no border. Focus trapped, focus returned.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-block">
+          <button class="btn btn-primary btn-md" data-modal-open="modal-sm-demo">Open sm — confirmation</button>
+          <button class="btn btn-secondary btn-md" data-modal-open="modal-md-demo">Open md — form</button>
+          <button class="btn btn-ghost btn-md" data-modal-open="modal-lg-demo">Open lg — settings</button>
+        </div>
+        <p class="note">Click backdrop, press Esc, or Tab past the edge — focus stays inside. On close, focus returns to the trigger.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>sizes</td><td><code>sm 320px · md 480px (default) · lg 640px</code></td></tr>
+          <tr><td>backdrop</td><td><code>rgba(26,26,26,0.4)</code> — click closes</td></tr>
+          <tr><td>surface</td><td>background + <code>shadow.elevated</code>, <strong>no border</strong></td></tr>
+          <tr><td>padding</td><td><code>24px (xl)</code> · parts gap <code>16px</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>One modal at a time.</strong> Never stack.</li>
+          <li><strong>Footer: max 2 buttons</strong>, primary rightmost. Delete confirmations use destructive — never primary.</li>
+          <li><strong>Body scroll locks while open.</strong></li>
+          <li><strong>Entrance: 300ms, transform + opacity only.</strong></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: TABS -->
+    <section class="view" id="view-tabs" aria-labelledby="h1-tabs">
+      <div class="view-head">
+        <div class="kicker">Components · 10</div>
+        <h1 id="h1-tabs">Tabs</h1>
+        <p class="lede">One convention: underline. The indicator slides — transform only.</p>
+      </div>
+      <div class="sect">
+        <div class="tabs" id="demo-tabs">
+          <div class="tabs-list" role="tablist" aria-label="Project sections">
+            <button class="tabs-trigger" role="tab" aria-selected="true" aria-controls="panel-overview" id="tab-overview">Overview</button>
+            <button class="tabs-trigger" role="tab" aria-selected="false" aria-controls="panel-activity" id="tab-activity">Activity</button>
+            <button class="tabs-trigger" role="tab" aria-selected="false" aria-controls="panel-settings" id="tab-settings">Settings</button>
+            <span class="tabs-indicator" id="tabs-indicator"></span>
+          </div>
+          <div class="tabs-panel" role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">One H1 per page, one primary per section. The overview holds the project's identity: what it is, who it's for, and the single action that matters most.</div>
+          <div class="tabs-panel" role="tabpanel" id="panel-activity" aria-labelledby="tab-activity" hidden>Events stream newest-first. Destructive actions in the feed confirm via modal — never inline.</div>
+          <div class="tabs-panel" role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" hidden>Settings use section-based forms with fieldsets. Changes save on explicit submit — no autosave surprises.</div>
+        </div>
+        <p class="note">Arrow keys move between tabs. The blue indicator slides with 300ms ease-out.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>trigger</td><td>padding <code>8px 12px</code> · label-md · 500</td></tr>
+          <tr><td>indicator</td><td>2px bar · <code>color.primary</code></td></tr>
+          <tr><td>list</td><td>bottom border <code>1px solid color.border</code></td></tr>
+          <tr><td>inactive text</td><td><code>color.muted-foreground</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>No pill/boxed variants.</strong> Underline is the convention — pills are decorative variety.</li>
+          <li><strong>Keyboard: arrows, Home, End.</strong> Every trigger is tabbable.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: TABLE -->
+    <section class="view" id="view-table" aria-labelledby="h1-table">
+      <div class="view-head">
+        <div class="kicker">Components · 11</div>
+        <h1 id="h1-table">Table</h1>
+        <p class="lede">One density. Borders separate rows, hover means clickable, empty states are designed.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Default — sortable, hoverable, selectable</h2>
+        <div class="table-wrap">
+          <table class="ds sortable" id="demo-table">
+            <thead>
+              <tr>
+                <th aria-sort="none" data-sort="name">Project <span class="sort-ind">↕</span></th>
+                <th data-sort="type">Type</th>
+                <th class="num" aria-sort="descending" data-sort="usage">Monthly usage <span class="sort-ind">↓</span></th>
+                <th data-sort="status">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-hover"><td>agent-dashboard</td><td>dashboard</td><td class="num">12400</td><td><span class="badge badge-primary"><span class="dot"></span>Active</span></td></tr>
+              <tr class="row-hover selected"><td>docs-site</td><td>content-site</td><td class="num">8210</td><td><span class="badge badge-default"><span class="dot"></span>Draft</span></td></tr>
+              <tr class="row-hover"><td>storefront</td><td>e-commerce</td><td class="num">5306</td><td><span class="badge badge-destructive"><span class="dot"></span>Failed</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Row 2 shows the selected tint. Click a header to sort — numeric sorts numerically.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Empty &amp; loading states</h2>
+        <div class="preview-row">
+          <div class="table-wrap" style="flex:1;min-width:280px">
+            <table class="ds">
+              <thead><tr><th>Project</th><th>Status</th></tr></thead>
+              <tbody><tr><td colspan="2" class="empty">No results</td></tr></tbody>
+            </table>
+          </div>
+          <div class="table-wrap" style="flex:1;min-width:280px">
+            <table class="ds">
+              <thead><tr><th>Project</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td><div class="skeleton" style="width:60%"></div></td><td><div class="skeleton" style="width:40%"></div></td></tr>
+                <tr><td><div class="skeleton" style="width:75%"></div></td><td><div class="skeleton" style="width:30%"></div></td></tr>
+                <tr><td><div class="skeleton" style="width:50%"></div></td><td><div class="skeleton" style="width:45%"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>row padding</td><td><code>12px 16px</code> — one density</td></tr>
+          <tr><td>header</td><td><code>label-sm · 14px · 500</code> · muted-foreground</td></tr>
+          <tr><td>cells</td><td><code>paragraph-sm · 14px · 400</code></td></tr>
+          <tr><td>hover / selected</td><td><code>color.muted</code> / <code>rgba(26,94,255,0.04)</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Numeric columns right-aligned</strong>, tabular-nums. Never center data.</li>
+          <li><strong>No zebra striping</strong> — borders do the separating.</li>
+          <li><strong>Loading = skeleton rows</strong>, never a spinner overlay.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- VIEW: SIDEBAR -->
+    <section class="view" id="view-sidebar" aria-labelledby="h1-sidebar">
+      <div class="view-head">
+        <div class="kicker">Components · 12</div>
+        <h1 id="h1-sidebar">Sidebar</h1>
+        <p class="lede">The nav on the left of this page is the live contract. This is its spec.</p>
+      </div>
+      <div class="sect">
+        <div class="preview-block col" style="max-width:420px">
+          <div style="border:1px solid var(--color-border);width:240px">
+            <div style="padding:16px;border-bottom:1px solid var(--color-border)">
+              <span style="font-family:var(--font-title);font-size:20px;font-weight:500">Acme</span>
+            </div>
+            <div style="padding:12px 0">
+              <div style="padding:8px 12px;font-size:12px;font-weight:500;color:var(--color-muted-foreground);text-transform:uppercase;letter-spacing:0.04em">Workspace</div>
+              <a class="sidebar-item" style="text-decoration:none">Projects</a>
+              <a class="sidebar-item active" style="text-decoration:none">Members</a>
+              <a class="sidebar-item" style="text-decoration:none">Billing</a>
+            </div>
+          </div>
+        </div>
+        <p class="note">"Members" shows the active state: muted background + 2px primary left edge.</p>
+      </div>
+      <div class="sect">
+        <h2><span class="n">—</span>Specs</h2>
+        <table class="spec-table">
+          <tr><th>Token</th><th>Value</th></tr>
+          <tr><td>width</td><td><code>240px fixed</code> — content fills the rest</td></tr>
+          <tr><td>container</td><td>border-right <code>1px solid color.border</code></td></tr>
+          <tr><td>item</td><td><code>label-sm · 14px · 500</code> · padding 12px · icon 16px</td></tr>
+          <tr><td>active</td><td>muted bg + <code>2px primary</code> left-edge indicator</td></tr>
+          <tr><td>section header</td><td><code>label-xs · 12px · uppercase</code></td></tr>
+        </table>
+        <ul class="rules-list">
+          <li><strong>Section headers are not links</strong> — they label groups.</li>
+          <li><strong>Container = canvas color.</strong> The border separates, not a tint.</li>
+          <li><strong>Mobile (&lt;768px): hamburger + overlay</strong> — this page does exactly that. Resize to check.</li>
+          <li><strong>Optional collapse: 64px icon rail</strong>, 300ms width transition.</li>
+        </ul>
+      </div>
+    </section>  </main>
+</div>
+
+<!-- ── MODALS (Modal contract) ── -->
+<div class="modal-backdrop" id="modal-sm-demo" role="presentation">
+  <div class="modal-container modal-sm" role="dialog" aria-modal="true" aria-labelledby="msm-title">
+    <div class="modal-header">
+      <h4 id="msm-title">Delete project?</h4>
+      <button class="btn btn-ghost btn-icon" data-modal-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">This removes the project and all its deployments. This action cannot be undone.</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-md" data-modal-close>Cancel</button>
+      <button class="btn btn-secondary btn-md" style="background:var(--color-destructive);color:var(--color-primary-foreground)" data-modal-close>Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-md-demo" role="presentation">
+  <div class="modal-container modal-md" role="dialog" aria-modal="true" aria-labelledby="mmd-title">
+    <div class="modal-header">
+      <h4 id="mmd-title">Rename workspace</h4>
+      <button class="btn btn-ghost btn-icon" data-modal-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label" for="mmd-input">Workspace name</label>
+        <input class="input input-md" id="mmd-input" value="dickys-lab">
+        <p class="field-desc">Visible to all members.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-md" data-modal-close>Cancel</button>
+      <button class="btn btn-primary btn-md" data-modal-close>Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-lg-demo" role="presentation">
+  <div class="modal-container modal-lg" role="dialog" aria-modal="true" aria-labelledby="mlg-title">
+    <div class="modal-header">
+      <h4 id="mlg-title">Region settings</h4>
+      <button class="btn btn-ghost btn-icon" data-modal-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="radio-group">
+        <label class="radio-card"><input type="radio" name="region" checked><span class="indicator"></span><span><span class="t">Singapore</span><span class="d" style="display:block">Lowest latency for Southeast Asia.</span></span></label>
+        <label class="radio-card"><input type="radio" name="region"><span class="indicator"></span><span><span class="t">Frankfurt</span><span class="d" style="display:block">EU data residency.</span></span></label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-md" data-modal-close>Cancel</button>
+      <button class="btn btn-primary btn-md" data-modal-close>Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-motion" role="presentation">
+  <div class="modal-container modal-sm" role="dialog" aria-modal="true" aria-labelledby="mmo-title">
+    <div class="modal-header">
+      <h4 id="mmo-title">300ms, ease-out</h4>
+      <button class="btn btn-ghost btn-icon" data-modal-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">Backdrop fades, container rises. Transform + opacity only — no layout animation.</div>
+    <div class="modal-footer"><button class="btn btn-primary btn-md" data-modal-close>Got it</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── hash routing + sidebar active state ── */
+  var navItems = Array.prototype.slice.call(document.querySelectorAll(".sidebar-item"));
+  var views = Array.prototype.slice.call(document.querySelectorAll(".view"));
+
+  function showView(name) {
+    var found = views.some(function (v) { return v.id === "view-" + name; });
+    if (!found) name = "overview";
+    views.forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
+    navItems.forEach(function (a) { a.classList.toggle("active", a.dataset.view === name); });
+    window.scrollTo(0, 0);
+    closeSidebar();
+  }
+
+  function routeFromHash() {
+    var h = (location.hash || "#overview").slice(1);
+    showView(h);
+  }
+  window.addEventListener("hashchange", routeFromHash);
+
+  /* ── mobile sidebar ── */
+  var sidebar = document.getElementById("sidebar");
+  var hamburger = document.getElementById("hamburger");
+  var mobileBackdrop = document.getElementById("mobileBackdrop");
+  function openSidebar() { sidebar.classList.add("open"); mobileBackdrop.classList.add("show"); hamburger.setAttribute("aria-expanded", "true"); document.body.style.overflow = "hidden"; }
+  function closeSidebar() { sidebar.classList.remove("open"); mobileBackdrop.classList.remove("show"); hamburger.setAttribute("aria-expanded", "false"); document.body.style.overflow = ""; }
+  hamburger.addEventListener("click", function () {
+    if (sidebar.classList.contains("open")) closeSidebar(); else openSidebar();
+  });
+  mobileBackdrop.addEventListener("click", closeSidebar);
+
+  /* ── modal (focus trap + return) ── */
+  var activeModal = null, lastFocused = null;
+  function openModal(id) {
+    var bd = document.getElementById(id);
+    if (!bd) return;
+    lastFocused = document.activeElement;
+    activeModal = bd;
+    bd.classList.add("open");
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(function () { bd.classList.add("visible"); });
+    var first = bd.querySelector("button, [href], input, select, textarea") || bd.querySelector(".modal-container");
+    if (first) first.focus();
+  }
+  function closeModal() {
+    if (!activeModal) return;
+    var bd = activeModal;
+    bd.classList.remove("visible");
+    setTimeout(function () {
+      bd.classList.remove("open");
+      document.body.style.overflow = "";
+      if (lastFocused && lastFocused.focus) lastFocused.focus();
+      activeModal = null;
+    }, 300);
+  }
+  document.addEventListener("click", function (e) {
+    var opener = e.target.closest("[data-modal-open]");
+    if (opener) { openModal(opener.getAttribute("data-modal-open")); return; }
+    if (e.target.closest("[data-modal-close]")) { closeModal(); return; }
+    if (activeModal && e.target === activeModal) closeModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (!activeModal) return;
+    if (e.key === "Escape") { closeModal(); return; }
+    if (e.key === "Tab") {
+      var focusables = activeModal.querySelectorAll("button, [href], input, select, textarea");
+      if (!focusables.length) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  /* ── select ── */
+  var sel = document.getElementById("demo-select");
+  if (sel) {
+    var trigger = sel.querySelector(".select-trigger");
+    var popup = sel.querySelector(".select-popup");
+    var items = Array.prototype.slice.call(sel.querySelectorAll(".select-item:not(.disabled)"));
+    var hl = -1;
+    function setHighlight(i) {
+      hl = i;
+      items.forEach(function (it, k) { it.classList.toggle("highlight", k === i); });
+    }
+    function close() {
+      sel.removeAttribute("data-open");
+      trigger.setAttribute("aria-expanded", "false");
+      setHighlight(-1);
+    }
+    trigger.addEventListener("click", function () {
+      if (sel.hasAttribute("data-open")) { close(); return; }
+      sel.setAttribute("data-open", "");
+      trigger.setAttribute("aria-expanded", "true");
+      setHighlight(items.findIndex(function (it) { return it.classList.contains("selected"); }));
+    });
+    items.forEach(function (it, i) {
+      it.addEventListener("click", function () {
+        items.forEach(function (x) { x.classList.remove("selected"); x.setAttribute("aria-selected", "false"); });
+        it.classList.add("selected");
+        it.setAttribute("aria-selected", "true");
+        sel.querySelector(".value").textContent = it.dataset.value;
+        close();
+        trigger.focus();
+      });
+      it.addEventListener("mousemove", function () { setHighlight(i); });
+    });
+    document.addEventListener("click", function (e) { if (sel.hasAttribute("data-open") && !sel.contains(e.target)) close(); });
+    sel.addEventListener("keydown", function (e) {
+      if (!sel.hasAttribute("data-open")) return;
+      if (e.key === "Escape") { close(); trigger.focus(); }
+      if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((hl + 1) % items.length); }
+      if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((hl - 1 + items.length) % items.length); }
+      if (e.key === "Enter" && hl > -1) { e.preventDefault(); items[hl].click(); }
+    });
+  }
+
+  /* ── tabs ── */
+  var tabs = document.getElementById("demo-tabs");
+  if (tabs) {
+    var triggers = Array.prototype.slice.call(tabs.querySelectorAll(".tabs-trigger"));
+    var panels = Array.prototype.slice.call(tabs.querySelectorAll(".tabs-panel"));
+    var indicator = document.getElementById("tabs-indicator");
+    function moveIndicator(btn) {
+      indicator.style.width = btn.offsetWidth + "px";
+      indicator.style.transform = "translateX(" + btn.offsetLeft + "px)";
+    }
+    function activate(btn) {
+      triggers.forEach(function (t) { t.setAttribute("aria-selected", String(t === btn)); });
+      panels.forEach(function (p) { p.hidden = p.getAttribute("aria-labelledby") !== btn.id; });
+      moveIndicator(btn);
+    }
+    triggers.forEach(function (t, i) {
+      t.addEventListener("click", function () { activate(t); });
+      t.addEventListener("keydown", function (e) {
+        var next = null;
+        if (e.key === "ArrowRight") next = triggers[(i + 1) % triggers.length];
+        if (e.key === "ArrowLeft") next = triggers[(i - 1 + triggers.length) % triggers.length];
+        if (e.key === "Home") next = triggers[0];
+        if (e.key === "End") next = triggers[triggers.length - 1];
+        if (next) { e.preventDefault(); next.focus(); activate(next); }
+      });
+    });
+    window.addEventListener("resize", function () {
+      var active = tabs.querySelector('.tabs-trigger[aria-selected="true"]');
+      if (active) moveIndicator(active);
+    });
+    activate(triggers[0]);
+  }
+
+  /* ── table sort ── */
+  var table = document.getElementById("demo-table");
+  if (table) {
+    var headers = Array.prototype.slice.call(table.querySelectorAll("th[data-sort]"));
+    headers.forEach(function (th) {
+      th.addEventListener("click", function () {
+        var key = th.dataset.sort;
+        var dir = th.getAttribute("aria-sort") === "ascending" ? -1 : 1;
+        headers.forEach(function (h) {
+          h.setAttribute("aria-sort", "none");
+          var ind = h.querySelector(".sort-ind"); if (ind) ind.textContent = "↕";
+        });
+        th.setAttribute("aria-sort", dir === 1 ? "ascending" : "descending");
+        var ind = th.querySelector(".sort-ind"); if (ind) ind.textContent = dir === 1 ? "↑" : "↓";
+        var tbody = table.querySelector("tbody");
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+        rows.sort(function (a, b) {
+          var ca = a.children[headers.indexOf(th)].textContent.trim();
+          var cb = b.children[headers.indexOf(th)].textContent.trim();
+          var na = parseFloat(ca.replace(/,/g, ""));
+          if (!isNaN(na) && !isNaN(parseFloat(cb))) return (na - parseFloat(cb)) * dir;
+          return ca.localeCompare(cb) * dir;
+        });
+        rows.forEach(function (r) { tbody.appendChild(r); });
+      });
+    });
+  }
+
+  /* ── form validation ── */
+  var form = document.getElementById("demo-form");
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var out = document.getElementById("form-result");
+      var name = document.getElementById("fm-name");
+      var url = document.getElementById("fm-url");
+      var ok = true;
+      [name, url].forEach(function (input) {
+        var field = input.closest(".field");
+        if (!input.value.trim()) {
+          field.setAttribute("data-invalid", "");
+          input.classList.add("input-error");
+          input.setAttribute("aria-invalid", "true");
+          ok = false;
+        } else {
+          field.removeAttribute("data-invalid");
+          input.classList.remove("input-error");
+          input.removeAttribute("aria-invalid");
+        }
+      });
+      if (ok) out.textContent = "Created \u201C" + name.value.trim() + "\u201D — validation passed.";
+      else out.textContent = "Validation failed — 2 fields need attention.";
+      out.style.color = ok ? "var(--color-foreground)" : "var(--color-destructive)";
+    });
+  }
+
+  routeFromHash();
+})();
+</script>
+</body>
+</html>

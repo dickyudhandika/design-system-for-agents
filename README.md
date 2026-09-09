@@ -15,6 +15,8 @@ A Hermes skill (also usable by any AI agent that reads project files) that makes
 | `ds4a review` | Three-pass analysis on generated code. Interactive approve/reject. |
 | `ds4a merge` | Merge approved rules into `.ds4a/library.md` in-place. |
 
+**Preview:** open `preview/index.html` — a live, browser-viewable showcase of all 13 core contracts, navigated by a sidebar that is itself the Sidebar contract. No server, no build; works offline.
+
 **The loop:**
 ```
 new project → ds4a init → build with AI → ds4a review → approve rules → ds4a merge → library grows → repeat
@@ -64,6 +66,7 @@ Copy `references/master-library.md` into your project as `DESIGN.md`. Your AI ag
 | `references/shadcn-baseline.md` | 154 | shadcn theme import: variable mapping, radius conversion, guardrail derivation |
 | `templates/project-design.md` | 66 | Blank DESIGN.md template |
 | `scripts/oklch-to-hex.py` | 105 | oklch → hex converter for shadcn theme import |
+| `preview/index.html` | 1515 | Live browser showcase — 13 contracts + foundations, self-dogfooding |
 
 ## Design aesthetic
 
