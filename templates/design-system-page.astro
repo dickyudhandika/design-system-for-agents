@@ -1,0 +1,58 @@
+---
+// frontend/src/pages/design-system.astro
+// Dev-only route: In production, redirect to home.
+if (!import.meta.env.DEV) {
+  return Astro.redirect('/');
+}
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { DesignSystemExplorer } from '../components/design-system/DesignSystemExplorer';
+import { COLOR_TOKENS, TYPOGRAPHY_TOKENS, SPACING_TOKENS, RADIUS_TOKENS } from '../lib/design-tokens';
+
+const stats = [
+  { label: 'Colors', value: COLOR_TOKENS.length },
+  { label: 'Type styles', value: TYPOGRAPHY_TOKENS.length },
+  { label: 'Spacing steps', value: SPACING_TOKENS.length },
+  { label: 'Radii', value: RADIUS_TOKENS.length },
+];
+---
+
+<BaseLayout
+  title="Design System — Getlumyra"
+  description="Single source of truth for Lumyra tokens: palette, typography, spacing, radii, and live UI components."
+>
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header class="py-14 sm:py-20 border-b border-lumyra-gray-200">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <p class="text-xs font-medium uppercase tracking-[0.125em] text-lumyra-gray-600">
+          Getlumyra · Design System
+        </p>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono text-lumyra-gray-800 bg-lumyra-cream border border-lumyra-gray-200 rounded-button">
+          <span class="w-1.5 h-1.5 rounded-full bg-lumyra-success"></span>
+          dev-only
+        </span>
+      </div>
+      <h1 class="mt-4 max-w-3xl font-display text-4xl sm:text-5xl font-medium tracking-tight text-balance leading-[1.1] text-lumyra-black">
+        Quiet surfaces, clear intent.
+      </h1>
+      <p class="mt-4 max-w-2xl text-base sm:text-lg text-pretty leading-relaxed text-lumyra-gray-600">
+        Living specimen sheet and interactive explorer for Lumyra tokens. All values are single-sourced from
+        <code class="px-1.5 py-0.5 font-mono text-xs text-lumyra-gray-800 bg-lumyra-gray-100 rounded-sm">src/lib/design-tokens.ts</code>
+        and compiled directly into Tailwind v4 <code class="px-1.5 py-0.5 font-mono text-xs text-lumyra-gray-800 bg-lumyra-gray-100 rounded-sm">@theme</code>.
+      </p>
+
+      <dl class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4 max-w-2xl">
+        {stats.map((stat) => (
+          <div class="border-l-2 border-lumyra-black pl-3 py-1">
+            <dt class="text-xs text-lumyra-gray-600 uppercase tracking-wider">{stat.label}</dt>
+            <dd class="text-2xl font-medium text-lumyra-black font-display tabular-nums">{stat.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </header>
+
+    <div class="py-10">
+      <DesignSystemExplorer client:load />
+    </div>
+  </main>
+</BaseLayout>
