@@ -25,7 +25,7 @@ Invoke as `/ds4a <subcommand>`.
 | `/ds4a detect` | Dry run: what would be imported. Writes nothing |
 | `/ds4a tone` / `tone <name>` / `tone new <name>` | List, switch, or fork a tone |
 | `/ds4a resolve` | Regenerate `DESIGN.md` from the layers |
-| `/ds4a preview` | Tone-aware preview page in `.ds4a/preview.html` |
+| `/ds4a preview` | Build and open the design-system page `.ds4a/preview.html` |
 | `/ds4a review` | Three-pass review of generated code, approve/reject each suggestion |
 | `/ds4a merge` | Merge approved rules to the project, a tone, or core |
 | `/ds4a status` | Active tone, type, versions, pending review |
@@ -34,6 +34,18 @@ Invoke as `/ds4a <subcommand>`.
 ```
 new project → /ds4a init → build with AI → /ds4a review → approve → /ds4a merge → library grows
 ```
+
+## Preview
+
+`/ds4a preview` (or `python3 scripts/build-preview.py --project .`) writes one self-contained page, `.ds4a/preview.html`, generated from the resolved tokens. It opens offline; only Google Fonts load when online.
+
+- **Foundations:** principles from the tone's Overview, color with WCAG contrast badges, type specimens and the full scale, spacing, radius, shadows and motion.
+- **Components:** all 13 core contracts with live states (hover, focus, error, disabled, open, selected). Filtered by project type, with "Show all".
+- **Tone switcher:** every tone in `library/tones/` is built into the page. Compare "this project" (tone + overlay) with the raw tones; components re-shape, not just recolor.
+- **Navigation:** grouped sidebar, breadcrumb, search (`/`), and a gliding nav pill on desktop and mobile.
+- **Motion from tokens:** every transition uses the tone's `duration.*` and `ease.*`; `prefers-reduced-motion` is respected.
+
+Rebuild after changing the tone or `.ds4a/project.md`; the page does not watch files. Nothing is written outside `.ds4a/`.
 
 ## The four cases
 
@@ -66,7 +78,7 @@ Without a skill runner: `python3 scripts/resolve.py --tone neutral --stdout > DE
 | `library/tones/` | `neutral.md`, `warm-sharp.md` |
 | `library/usage.md` | Which projects used which grown contracts |
 | `scripts/resolve.py` | Layers → `DESIGN.md`, with contrast and matrix-parity checks |
-| `scripts/build-preview.py` | Tokens → `.ds4a/preview.html` (tone-aware showcase with tone switcher) |
+| `scripts/build-preview.py` | Tokens → `.ds4a/preview.html` (see [Preview](#preview), [preview.md](references/preview.md)) |
 | `scripts/oklch-to-hex.py` | shadcn oklch → hex |
 | `references/` | detection, shadcn mapping, review prompt, matrix, core benchmark, pitfalls |
 | `templates/project-overlay.md` | Starting overlay |
@@ -84,7 +96,9 @@ Anything that reads project files: Claude Code, Codex, Cursor, Copilot, Hermes, 
 
 **Will it overwrite my theme or my DESIGN.md?** No. Only `DESIGN.md` (if it's ds4a-generated) and `.ds4a/` are written; `resolve.py` refuses to overwrite a DESIGN.md it didn't generate.
 
-**What does the contrast check do?** `resolve.py` warns when `foreground`, `muted-foreground`, or button text fail WCAG AA against their backgrounds. `warm-sharp`'s `muted-foreground` (`#A1A1A1` on `#FDFCF8`) currently fails at 2.5:1 — it's kept as-is so the original look is preserved, but the warning is real.
+**Why is the preview plain HTML?** It has to open anywhere with no build step and no dependencies, and it shows the tokens in a real browser. For live framework components, use the in-framework `/design-system` references in `templates/`.
+
+**What does the contrast check do?** `resolve.py` and `build-preview.py` warn when `foreground`, `muted-foreground`, or button text fail WCAG AA against their backgrounds. `warm-sharp`'s `muted-foreground` (`#A1A1A1` on `#FDFCF8`) currently fails at 2.5:1 — it's kept as-is so the original look is preserved, but the warning is real.
 
 ## License
 
