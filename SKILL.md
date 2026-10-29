@@ -194,6 +194,6 @@ Rules:
 - `references/component-matrix.md` — component and layout relevance per project type
 - `references/core-components.md` — benchmark behind the 13 core contracts; tiers
 - `references/review-prompt.md` — three-pass review, output format, targets
-- `references/preview.md` — preview build; legacy showcase and in-framework templates
+- `references/preview.md` — preview page sections and features; in-framework templates
 - `references/pitfalls.md`
 - `templates/project-overlay.md` — starting overlay

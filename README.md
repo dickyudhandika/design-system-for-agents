@@ -66,11 +66,11 @@ Without a skill runner: `python3 scripts/resolve.py --tone neutral --stdout > DE
 | `library/tones/` | `neutral.md`, `warm-sharp.md` |
 | `library/usage.md` | Which projects used which grown contracts |
 | `scripts/resolve.py` | Layers → `DESIGN.md`, with contrast and matrix-parity checks |
-| `scripts/build-preview.py` | Tokens → `.ds4a/preview.html` |
+| `scripts/build-preview.py` | Tokens → `.ds4a/preview.html` (tone-aware showcase with tone switcher) |
 | `scripts/oklch-to-hex.py` | shadcn oklch → hex |
 | `references/` | detection, shadcn mapping, review prompt, matrix, core benchmark, pitfalls |
 | `templates/project-overlay.md` | Starting overlay |
-| `preview/index.html`, `templates/*.tsx/.astro`, `scripts/build-preview-html.ts` | Legacy showcase and in-framework `/design-system` references |
+| `templates/*.tsx/.astro`, `scripts/build-preview-html.ts` | In-framework `/design-system` references |
 
 ## Which AI agents work
 
