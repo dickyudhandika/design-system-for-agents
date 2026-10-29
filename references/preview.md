@@ -30,9 +30,10 @@ Sections, in order:
    the tone's prose tables; hover a motion row to play it).
 6. **Components**: all 13 core contracts with their states (Button variants x
    default/hover/focus/disabled, Input, Field, Fieldset, Form, Select open and
-   closed, RadioGroup, Card, Badge, Modal, Tabs, Table, Sidebar). Each card
-   shows the anatomy line from `library/core.md`. With a project type, cards
-   are filtered by `component-matrix.md`; a "Show all" chip reveals the rest.
+   closed, RadioGroup, Card, Badge, Tabs, Modal, Table, Sidebar). Each card
+   keeps only its title and demo; labels sit with the examples they describe.
+   With a project type, cards are filtered by `component-matrix.md`; a "Show
+   all" chip reveals the rest.
 7. **Tokens**: the resolved frontmatter, collapsible.
 
 Features:

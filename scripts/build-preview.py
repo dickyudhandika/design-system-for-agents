@@ -321,7 +321,7 @@ def cap(s):
 
 def c_button():
     states = [("default", "", ""), ("hover", " is-hover", ""), ("focus", " is-focus", ""), ("disabled", "", " disabled")]
-    grid = ['<div class="mx"><span></span>'] + [cap(s) for s, _, _ in states]
+    grid = ['<div class="mx"><span></span>'] + [f'<span class="cap hcap">{s}</span>' for s, _, _ in states]
     for v in ("primary", "secondary", "ghost", "destructive"):
         grid.append(cap(v))
         grid += [f'<div><button class="btn btn-{v}{c}"{a}>{v.title()}</button></div>' for _, c, a in states]
@@ -343,7 +343,8 @@ def c_field():
     return ('<div class="g2"><div class="field"><label for="f1">Workspace name</label><input id="f1" class="inp" value="Acme">'
             '<p class="fdesc">Shown in the sidebar and invites.</p></div>'
             '<div class="field" data-invalid><label for="f2">Workspace URL</label><input id="f2" class="inp" value="acme corp" '
-            'aria-invalid="true"><div class="ferr" aria-live="polite">Use letters, numbers and dashes only.</div></div></div>')
+            'aria-invalid="true" aria-describedby="f2err"><div class="ferr" id="f2err" aria-live="polite">'
+            'Use letters, numbers and dashes only.</div></div></div>')
 
 
 def c_fieldset():
@@ -365,13 +366,18 @@ def c_form():
 
 
 def c_select():
-    def sel(open_):
-        opts = "".join(f'<div class="opt{c}" role="option">{n}</div>' for n, c in
-                       (("Daily", " hl"), ("Weekly", " selected"), ("Monthly", ""), ("Never", " dis")))
-        return (f'<div class="selw"><button class="sel{" open" if open_ else ""}" type="button" aria-haspopup="listbox" '
-                f'aria-expanded="{str(open_).lower()}"><span class="val">Weekly</span>{icon("chev", "chev")}</button>'
-                f'<div class="pop{"" if open_ else " closed"}" role="listbox">{opts}</div></div>')
-    return f'<div class="g2"><div>{cap("closed")}{sel(False)}</div><div>{cap("open")}{sel(True)}</div></div>'
+    def sel(open_, i):
+        sid = f"freq{i}"
+        opts = "".join(
+            f'<div class="opt{c}" id="{sid}-o{j}" role="option" aria-selected="{str("selected" in c).lower()}"'
+            f'{" aria-disabled=true" if "dis" in c else ""}>{n}</div>'
+            for j, (n, c) in enumerate((("Daily", " hl"), ("Weekly", " selected"), ("Monthly", ""), ("Never", " dis"))))
+        return (f'<div class="selw"><button class="sel{" open" if open_ else ""}" type="button" id="{sid}" role="combobox" '
+                f'aria-haspopup="listbox" aria-expanded="{str(open_).lower()}" aria-controls="{sid}-pop" '
+                f'aria-label="Notification frequency"><span class="val">Weekly</span>{icon("chev", "chev")}</button>'
+                f'<div class="pop{"" if open_ else " closed"}" id="{sid}-pop" role="listbox" aria-labelledby="{sid}">'
+                f'{opts}</div></div>')
+    return f'<div class="g2"><div>{cap("closed")}{sel(False, 1)}</div><div>{cap("open")}{sel(True, 2)}</div></div>'
 
 
 def c_radio():
@@ -403,7 +409,7 @@ def c_badge():
 def c_modal():
     ghost = "".join(f'<i style="width:{w}%"></i>' for w in (40, 90, 75, 85, 60, 80))
     return (f'<div class="stage"><div class="ghostpage">{ghost}</div><div class="backdrop"></div>'
-            '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="mh"><h4 id="mt">Delete project?</h4>'
+            '<div class="modal" role="group" aria-labelledby="mt"><div class="mh"><h4 id="mt">Delete project?</h4>'
             f'<button class="btn btn-ghost btn-icon" aria-label="Close">{icon("x")}</button></div>'
             '<div class="mb">This removes the project, its deployments and 14 environment variables. This cannot be undone.</div>'
             '<div class="mf"><button class="btn btn-secondary">Cancel</button><button class="btn btn-destructive">Delete project</button></div>'
@@ -415,8 +421,11 @@ def c_tabs():
             ("Activity", "Ada merged #482 · Grace opened #483 · Linus commented on #479."),
             ("Settings", "Branch protection, environment variables and build hooks."),
             ("Billing", "")]
-    tl = "".join(f'<button class="tab" role="tab" id="tab{i}" aria-controls="tp{i}" aria-selected="{str(i == 0).lower()}" '
-                 f'tabindex="{0 if i == 0 else -1}"{" disabled" if not p else ""}>{n}</button>' for i, (n, p) in enumerate(tabs))
+    def tab(i, n, p):
+        controls = f' aria-controls="tp{i}"' if p else ""
+        return (f'<button class="tab" role="tab" id="tab{i}"{controls} aria-selected="{str(i == 0).lower()}" '
+                f'tabindex="{0 if i == 0 else -1}"{" disabled" if not p else ""}>{n}</button>')
+    tl = "".join(tab(i, n, p) for i, (n, p) in enumerate(tabs))
     tp = "".join(f'<div class="tp" role="tabpanel" id="tp{i}" aria-labelledby="tab{i}"{"" if i == 0 else " hidden"}>{p}</div>'
                  for i, (n, p) in enumerate(tabs) if p)
     return f'<div class="tabsx"><div class="tl" role="tablist">{tl}</div>{tp}</div>'
@@ -435,31 +444,35 @@ def c_table():
 
 def c_sidebar():
     def item(n, ic, cls=""):
+        if "dis" in cls:
+            return (f'<span class="sbi{cls}" aria-disabled="true" title="{n}">{icon(ic)}'
+                    f'<span class="lbl">{n}</span></span>')
         return f'<a class="sbi{cls}" href="#components" title="{n}">{icon(ic)}<span class="lbl">{n}</span></a>'
-    nav = (f'<nav class="sb" aria-label="Sample"><div class="sbh"><i></i><span class="lbl">Acme</span></div>'
+    nav = (f'<nav class="sb" id="sb-demo" aria-label="Sample"><div class="sbh"><i></i><span class="lbl">Acme</span></div>'
            f'<div class="sbs"><div class="sbsh">Workspace</div>{item("Dashboard", "grid", " active")}{item("Inbox", "inbox")}'
            f'{item("Analytics", "chart")}</div><div class="sbs"><div class="sbsh">Team</div>{item("Members", "users")}'
            f'{item("Settings", "gear")}{item("Archive", "inbox", " dis")}</div>'
-           f'<div class="sbf"><button class="btn btn-ghost btn-icon" data-collapse aria-label="Collapse sidebar">{icon("panel")}</button></div></nav>')
+           f'<div class="sbf"><button class="btn btn-ghost btn-icon" data-collapse aria-label="Collapse sidebar" '
+           f'aria-expanded="true" aria-controls="sb-demo">{icon("panel")}</button></div></nav>')
     return (f'{cap("press the panel button to collapse")}<div class="sbdemo">{nav}<div class="sbmain"><h4>Dashboard</h4>'
             '<i style="width:70%"></i><i style="width:90%"></i><i style="width:55%"></i></div></div>')
 
 
 # (name, render, states, wide)
 COMPONENTS = [
-    ("Button", c_button, "variants + destructive · default / hover / focus / disabled · sizes", True),
-    ("Input", c_input, "default / focus / error / disabled", False),
-    ("Field", c_field, "label · description · error", False),
-    ("Fieldset", c_fieldset, "legend · enabled / disabled", False),
-    ("Form", c_form, "login sample", False),
-    ("Select", c_select, "closed / open · highlighted / selected / disabled", False),
-    ("RadioGroup", c_radio, "checked / unchecked / disabled · radio card", False),
-    ("Card", c_card, "default / elevated / flush", False),
-    ("Badge", c_badge, "default / primary / destructive", False),
-    ("Modal", c_modal, "static dialog on backdrop", True),
-    ("Tabs", c_tabs, "active / inactive / disabled · arrow keys", False),
-    ("Table", c_table, "header / hover / selected · numeric right-aligned", True),
-    ("Sidebar", c_sidebar, "active / hover / disabled · collapsed", True),
+    ("Button", c_button, True),
+    ("Input", c_input, False),
+    ("Field", c_field, False),
+    ("Fieldset", c_fieldset, False),
+    ("Form", c_form, False),
+    ("Select", c_select, False),
+    ("RadioGroup", c_radio, False),
+    ("Card", c_card, True),
+    ("Badge", c_badge, False),
+    ("Tabs", c_tabs, False),
+    ("Modal", c_modal, True),
+    ("Table", c_table, True),
+    ("Sidebar", c_sidebar, True),
 ]
 COMP_TOKENS = {"RadioGroup": "radio-group"}
 
@@ -468,47 +481,17 @@ def is_off(name, ptype, comp_matrix):
     return bool(ptype) and not comp_matrix.get(R.norm(name), {}).get(ptype, True)
 
 
-def anatomy_lines(core_body, tree):
-    def fill(s):
-        def sub(m):
-            try:
-                return R.unquote(R.resolve_value(tree, m.group(1)))
-            except (KeyError, R.ResolveError):
-                return m.group(1)
-        return R.PH.sub(sub, s)
-    out = {}
-    comps = R.split_sections(core_body).get("Components", "")
-    for part in re.split(r"(?m)^### ", comps)[1:]:
-        name, _, body = part.partition("\n")
-        name = re.sub(r"\s*\(grown\)\s*$", "", name.strip())
-        parts = re.findall(r"(?m)^\|\s*`([A-Za-z]+\.[A-Za-z]+)`", body)
-        bold = re.findall(r"(?m)^\*\*(.+?)\*\*\s*$", body)
-        if parts:
-            line = " · ".join(f"`{p}`" for p in parts)
-        elif bold:
-            line = " · ".join(b.rstrip(".") for b in bold)
-        else:
-            line = next((p.strip() for p in body.split("\n\n") if p.strip() and not p.lstrip().startswith(("-", "|"))), "")
-        out[R.norm(name)] = md_inline(fill(line))
-    return out
-
-
-def components(tree, core_body, ptype, comp_matrix):
-    anat = anatomy_lines(core_body, tree)
+def components(tree, ptype, comp_matrix):
     cards, shown = [], 0
-    for name, render, states, wide in COMPONENTS:
+    for name, render, wide in COMPONENTS:
         key = COMP_TOKENS.get(name, name.lower())
-        toks = [k for k, v, _ in leaves(tree.get("components", {}).get(key)) if not v.startswith("[")]
         off = is_off(name, ptype, comp_matrix)
         shown += not off
         vals = " ".join(f"{k} {v}" for k, v, _ in leaves(tree.get("components", {}).get(key)))
-        tok_list = " ".join(f"--c-{key}-{k}" for k in toks)
         cards.append(
             f'<article class="cmp{" wide" if wide else ""}{" off" if off else ""}" id="c-{key}" data-title="{name}" '
-            f'data-s="{esc(name)} {esc(states)} {esc(vals)}"><header><h3 class="t-title-h6">{name}</h3>'
-            f'{f"<span class=offtag>not in {esc(ptype)}</span>" if off else ""}<span class="states">{esc(states)}</span></header>'
-            f'<p class="anat">{anat.get(R.norm(name), "")}</p><div class="demo">{render()}</div>'
-            f'<details class="toks"><summary>{len(toks)} tokens</summary><code>{esc(tok_list)}</code></details></article>')
+            f'data-s="{esc(name)} {esc(vals)}"><header><h3 class="t-title-h6">{name}</h3></header>'
+            f'<div class="demo">{render()}</div></article>')
     total = len(COMPONENTS)
     if ptype and shown < total:
         bar = (f'<div class="cbar"><p>Showing {shown} of {total} contracts for <strong>{esc(ptype)}</strong> '
@@ -532,23 +515,23 @@ TEMPLATE = """<!DOCTYPE html>
 {{tone_css}}
 {{page_css}}
 </style></head>
-<body><div class="shell">
+<body><a class="skip" href="#main">Skip to content</a><div class="shell">
 <aside class="side">
   <a class="brand" href="#overview"><span class="mark"><i></i><i></i><i></i><i></i></span><span><b>ds4a</b>{{brand}}</span></a>
   <nav class="snav" aria-label="Sections">{{side_nav}}</nav>
 </aside>
 <div class="col">
-<header class="top">
+<header class="top"><div class="topin">
   <div class="crumb"><span>Design system</span><span class="sep">/</span><b id="crumb">Overview</b></div>
   <div class="tools">
     <label class="tsel"><span>Tone</span><select id="tone">{{options}}</select></label>
     <label class="srch"><input id="q" type="search" placeholder="Search tokens and components" autocomplete="off" aria-label="Search"><kbd>/</kbd></label>
   </div>
   <nav class="mnav" aria-label="Sections">{{mobile_nav}}</nav>
-</header>
-<main>
+</div></header>
+<main id="main">
 {{sections}}
-<p class="nomatch" hidden>No tokens or components match.</p>
+<p class="nomatch" role="status"></p>
 <footer class="pfoot">Generated from tokens by ds4a. Edit <code>.ds4a/project.md</code> or the tone, then rebuild.</footer>
 </main></div></div>
 <script>
@@ -563,7 +546,9 @@ body{margin:0;background:var(--color-background);color:var(--color-foreground);@
 [hidden]{display:none!important}
 h1,h2,h3,h4,p,ul{margin:0}
 code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
-p code,li code,.anat code{padding:1px 4px;background:var(--color-muted);border-radius:var(--radius-xs)}
+p code,li code{padding:1px 4px;background:var(--color-muted);border-radius:var(--radius-xs);color:var(--color-foreground)}
+.skip{position:absolute;top:var(--space-lg);left:var(--space-lg);z-index:100;padding:var(--space-sm) var(--space-md);border-radius:var(--radius-sm);background:var(--color-foreground);color:var(--color-background);@t(label-sm);text-decoration:none;transform:translateY(-300%)}
+.skip:focus{transform:none;outline:2px solid var(--color-primary);outline-offset:2px}
 .shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
 .side{position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-xl);padding:var(--space-lg) var(--space-md) var(--space-2xl);border-right:1px solid var(--color-border);background:var(--color-background);scrollbar-width:thin}
 .brand{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-xs) var(--space-sm);color:inherit;text-decoration:none}
@@ -577,11 +562,12 @@ p code,li code,.anat code{padding:1px 4px;background:var(--color-muted);border-r
 .sg>p{display:flex;justify-content:space-between;padding:0 var(--space-sm) var(--space-xs);@t(label-xs);color:var(--color-muted-foreground)}
 .sg>p span{font-variant-numeric:tabular-nums;font-weight:400}
 .sg a{position:relative;@t(paragraph-sm);color:var(--color-muted-foreground);text-decoration:none;padding:6px var(--space-sm);border-radius:var(--radius-sm);transition:color var(--motion-fast) var(--ease-out)}
-.sg a:hover,.sg a.on{color:var(--color-foreground)}
+.sg a.on{color:var(--color-foreground)}
 .sg a.on{font-weight:500}
 .sg a.off{display:none}:root.all .sg a.off{display:block;opacity:.6}
-.col{min-width:0}
-.top{position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-sm) var(--space-lg);padding:var(--space-md) var(--space-3xl);background:var(--color-background);border-bottom:1px solid var(--color-border)}
+.col{min-width:0;--content-max:1180px}
+.top{position:sticky;top:0;z-index:10;padding:var(--space-md) var(--space-3xl);background:var(--color-background);border-bottom:1px solid var(--color-border)}
+.topin{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-sm) var(--space-lg);width:100%;max-width:calc(var(--content-max) - 2*var(--space-3xl))}
 .crumb{display:flex;align-items:center;gap:var(--space-sm);min-width:0;@t(paragraph-sm);color:var(--color-muted-foreground)}
 .crumb b{font-weight:500;color:var(--color-foreground)}.sep{opacity:.5}
 .tools{display:flex;align-items:center;gap:var(--space-sm)}
@@ -593,7 +579,7 @@ p code,li code,.anat code{padding:1px 4px;background:var(--color-muted);border-r
 .srch kbd{margin-right:var(--space-sm);padding:0 6px;border:1px solid var(--color-border);border-radius:4px;font:11px/18px ui-monospace,monospace;color:var(--color-muted-foreground)}
 .tsel:focus-within,.srch:focus-within{outline:2px solid var(--color-primary);outline-offset:1px}
 .mnav{display:none}
-main{padding:var(--space-3xl) var(--space-3xl) var(--space-2xl);max-width:1180px;min-width:0}
+main{padding:var(--space-3xl) var(--space-3xl) var(--space-2xl);max-width:var(--content-max);min-width:0}
 .pfoot{padding-top:var(--space-xl);border-top:1px solid var(--color-border);@t(paragraph-xs);color:var(--color-muted-foreground)}
 section{padding-bottom:var(--space-4xl)}
 section+section{border-top:1px solid var(--color-border);padding-top:var(--space-3xl)}
@@ -605,6 +591,7 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .row{display:flex;flex-wrap:wrap;gap:var(--space-md);align-items:center}
 .cap{display:block;@t(label-xs);color:var(--color-muted-foreground);margin-bottom:var(--space-sm)}
 .nomatch{color:var(--color-muted-foreground);padding:var(--space-4xl) 0}
+.nomatch:empty{padding:0}
 /* hero */
 .hero{max-width:780px}
 .hero h1{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-sm) var(--space-md);margin-bottom:var(--space-lg);overflow-wrap:anywhere}
@@ -651,7 +638,7 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .bar{height:16px;max-width:100%;background:var(--color-primary);border-radius:var(--radius-xs)}
 .rgrid{display:flex;flex-wrap:wrap;gap:var(--space-lg)}
 .rad{width:128px;height:96px;border:1.5px solid var(--color-foreground);background:var(--color-muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-.rad code{color:var(--color-foreground);font-size:13px}.rad span{@t(paragraph-xs);color:var(--color-muted-foreground)}
+.rad code{color:var(--color-foreground);font-size:13px}.rad span{@t(paragraph-xs);color:var(--color-foreground)}
 .egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:var(--space-2xl);padding:var(--space-2xl);background:var(--color-muted);border-radius:var(--radius-lg)}
 .sh{min-height:140px;padding:var(--space-lg);background:var(--color-background);border-radius:var(--radius-md);display:flex;flex-direction:column;justify-content:center;gap:var(--space-xs)}
 .sh b{@t(label-md)}.sh code{color:var(--color-muted-foreground);overflow-wrap:anywhere}.sh span{@t(paragraph-xs);color:var(--color-muted-foreground)}
@@ -660,7 +647,6 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .mrow code{font-size:13px;margin-right:var(--space-sm)}.mrow span,.mrow p{@t(paragraph-xs);color:var(--color-muted-foreground)}
 .track{position:relative;height:28px;width:260px;max-width:100%;background:var(--color-muted);border-radius:var(--radius-full)}
 .track i{position:absolute;left:4px;top:4px;width:20px;height:20px;border-radius:var(--radius-full);background:var(--color-primary);transition:transform var(--d) var(--e)}
-.mrow:hover .track i{transform:translateX(228px)}
 .raw{border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden}
 .raw summary{cursor:pointer;padding:var(--space-lg) var(--space-xl);@t(label-sm)}
 .raw pre{margin:0;padding:var(--space-xl);background:var(--color-muted);overflow:auto;max-height:640px;line-height:1.6}
@@ -668,20 +654,15 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .cbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);margin-bottom:var(--space-xl);color:var(--color-muted-foreground);@t(paragraph-sm)}
 .chipbtn{@t(label-xs);padding:var(--space-xs) var(--space-md);border:1px solid var(--color-border);border-radius:var(--radius-full);background:var(--color-background);color:var(--color-foreground);cursor:pointer}
 :root.all .chipbtn{background:var(--color-foreground);color:var(--color-background)}
-.cmps{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:var(--space-xl)}
+.cmps{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:var(--space-xl);align-items:start}
 .cmp{border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-xl);min-width:0}
 .cmp.wide{grid-column:1/-1}
 .cmp.off{display:none}:root.all .cmp.off{display:block}
-.cmp>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-sm) var(--space-md)}
-.states{@t(label-xs);color:var(--color-muted-foreground);margin-left:auto}
-.offtag{@t(label-xs);color:var(--color-destructive)}
-.anat{@t(paragraph-xs);color:var(--color-muted-foreground);margin:var(--space-xs) 0 var(--space-xl)}
+.cmp>header{margin-bottom:var(--space-xl)}
 .demo{display:flex;flex-direction:column;gap:var(--space-lg)}
-.toks{margin-top:var(--space-xl);@t(paragraph-xs);color:var(--color-muted-foreground)}
-.toks summary{cursor:pointer}.toks code{display:block;margin-top:var(--space-sm);word-spacing:var(--space-sm);line-height:1.8}
 .g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:var(--space-lg);align-items:start}
-.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:var(--space-lg);align-items:start}
-.scroll{overflow-x:auto;padding:4px}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:var(--space-lg);align-items:start}
+.scroll{overflow-x:auto;margin:0 calc(var(--space-xs) * -1);padding:var(--space-xs)}
 .ic{flex:none}
 /* Button */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--c-button-gap);padding:var(--c-button-padding-md);border:1px solid transparent;border-radius:var(--c-button-radius);@t(label-md);font-size:var(--c-button-font-size-md);font-weight:var(--c-button-font-weight);white-space:nowrap;cursor:pointer;transition:background-color var(--motion-fast) var(--ease-out),border-color var(--motion-fast) var(--ease-out),filter var(--motion-fast) var(--ease-out)}
@@ -692,13 +673,14 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .btn-secondary{background:var(--color-muted);color:var(--color-foreground)}
 .btn-ghost{background:transparent;color:var(--color-foreground)}
 .btn-destructive{background:var(--color-destructive);color:var(--color-primary-foreground)}
-.btn-primary:hover,.btn-primary.is-hover,.btn-destructive:hover,.btn-destructive.is-hover{filter:brightness(.9)}
-.btn-secondary:hover,.btn-secondary.is-hover{background:var(--color-border)}
-.btn-ghost:hover,.btn-ghost.is-hover{border-color:var(--color-border)}
+.btn-primary.is-hover,.btn-destructive.is-hover{filter:brightness(.9)}
+.btn-secondary.is-hover{background:var(--color-border)}
+.btn-ghost.is-hover{border-color:var(--color-border)}
 .btn:disabled,.inp:disabled,.is-disabled,.sbi.dis{opacity:.5;cursor:not-allowed;pointer-events:none}
 .is-focus,.btn:focus-visible,.inp:focus-visible,.sel:focus-visible,.tab:focus-visible,.sbi:focus-visible,.chipbtn:focus-visible,.sg a:focus-visible,.mnav a:focus-visible,.radio input:focus-visible,.rcard input:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .mx{display:grid;grid-template-columns:auto repeat(4,minmax(max-content,1fr));gap:var(--space-md) var(--space-lg);align-items:center}
-.mx .cap{margin:0}
+.mx>div{display:flex;justify-content:center}
+.mx .cap{margin:0}.mx .hcap{text-align:center}
 /* Input, Field, Fieldset, Form */
 .inp{display:block;width:100%;padding:var(--c-input-padding-md);border:var(--c-input-border);border-radius:var(--c-input-radius);@t(paragraph-md);font-size:var(--c-input-font-size-md);font-weight:var(--c-input-font-weight);background:var(--color-background);color:var(--color-foreground);transition:border-color var(--motion-fast) var(--ease-out)}
 .inp::placeholder{color:var(--color-muted-foreground)}
@@ -717,11 +699,12 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .sel .chev{transition:transform var(--motion-fast) var(--ease-out)}
 .sel.open .chev{transform:rotate(var(--c-select-icon-rotation))}
 .selw{position:relative}
+.selw:has(.pop:not(.closed)){margin-bottom:200px}
 #c-select .g2{min-height:260px}
 .pop{position:absolute;top:100%;left:0;right:0;z-index:5;transform-origin:top;transition:opacity var(--motion-smooth) var(--ease-in-out),transform var(--motion-smooth) var(--ease-in-out),visibility 0s;margin-top:var(--space-xs);padding:var(--c-select-popup-padding);border-radius:var(--c-select-popup-radius);box-shadow:var(--shadow-elevated);background:var(--color-background);max-height:var(--c-select-popup-max-height);overflow:auto;display:flex;flex-direction:column;gap:2px}
 .opt{display:flex;align-items:center;justify-content:space-between;padding:var(--space-sm) var(--space-md);border-radius:max(0px,calc(var(--c-select-popup-radius) - var(--c-select-popup-padding)));@t(paragraph-md);font-size:var(--c-select-font-size);cursor:pointer}
 .pop.closed{opacity:0;transform:translateY(-4px) scale(.98);visibility:hidden;pointer-events:none;transition:opacity var(--motion-smooth) var(--ease-in-out),transform var(--motion-smooth) var(--ease-in-out),visibility 0s linear var(--motion-smooth)}
-.opt:hover,.opt.hl{background:var(--color-muted)}
+.opt.hl{background:var(--color-muted)}
 .opt.selected{font-weight:500}
 .opt.selected::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--color-primary)}
 .opt.dis{opacity:.5;cursor:not-allowed;pointer-events:none}
@@ -731,12 +714,13 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .radio input,.rcard input{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:16px;height:16px;border:2px solid var(--color-muted-foreground);border-radius:50%;display:grid;place-content:center;cursor:pointer;transition:border-color var(--motion-fast) var(--ease-out)}
 .rcard input{width:18px;height:18px;margin-top:2px}
 .radio input::before,.rcard input::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--color-primary);transform:scale(0);transition:transform var(--motion-fast) var(--ease-out)}
-.radio input:checked,.rcard input:checked,.radio:hover input,.rcard:hover input{border-color:var(--color-primary)}
+.radio input:checked,.rcard input:checked{border-color:var(--color-primary)}
 .radio input:checked::before,.rcard input:checked::before{transform:scale(1)}
 .rcard{display:flex;align-items:flex-start;gap:var(--c-radio-group-radio-card-gap);padding:var(--c-radio-group-radio-card-padding);border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:border-color var(--motion-fast) var(--ease-out)}
-.rcard:hover,.rcard:has(input:checked){border-color:var(--color-primary)}
+.rcard:has(input:checked){border-color:var(--color-primary)}
 .rcard:has(input:checked){background:var(--c-radio-group-checked-background)}
 .rcard b{display:block;@t(label-md)}.rcard span{@t(paragraph-sm);color:var(--color-muted-foreground)}
+.rcard:has(input:checked) span{color:var(--color-foreground)}
 /* Card, Badge */
 .card{background:var(--color-background);border:var(--c-card-border);border-radius:var(--c-card-radius);padding:var(--c-card-padding);box-shadow:var(--shadow-subtle)}
 .card.elev{box-shadow:var(--shadow-elevated)}
@@ -758,11 +742,12 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .mb{@t(paragraph-md);color:var(--color-muted-foreground)}
 .mf{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--c-modal-footer-gap)}
 /* Tabs */
-.tl{display:flex;gap:var(--space-xs);border-bottom:var(--c-tabs-list-border)}
+.tl{display:flex;gap:var(--space-xs);border-bottom:var(--c-tabs-list-border);overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
 .tab{position:relative;margin-bottom:-1px;padding:var(--c-tabs-trigger-padding);border:0;border-radius:var(--c-tabs-radius) var(--c-tabs-radius) 0 0;background:none;@t(label-md);font-size:var(--c-tabs-trigger-font-size);font-weight:var(--c-tabs-trigger-font-weight);color:var(--color-muted-foreground);white-space:nowrap;cursor:pointer;transition:color var(--motion-fast) var(--ease-out)}
-.tab:hover,.tab[aria-selected=true]{color:var(--color-foreground)}
+.tab[aria-selected=true]{color:var(--color-foreground)}
 .tab::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--c-tabs-indicator-height);background:var(--c-tabs-indicator-color);transform:scaleX(0);transition:transform var(--motion-smooth) var(--ease-out)}
 .tab[aria-selected=true]::after{transform:scaleX(1)}
+.tab:focus-visible{outline-offset:-2px}
 .tab:disabled{opacity:.5;cursor:not-allowed}
 .tp{padding-top:var(--space-lg);@t(paragraph-sm);color:var(--color-muted-foreground)}
 /* Table */
@@ -772,7 +757,6 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .tbl th,.tbl td{padding:var(--c-table-row-padding);border-bottom:var(--c-table-row-border);white-space:nowrap}
 .tbl tbody tr{transition:background-color var(--motion-fast) var(--ease-out)}
 .tbl tr.selected{background:var(--c-table-selected-background)}
-.tbl tbody tr:hover{background:var(--c-table-hover-background)}
 .tbl .num{text-align:right;font-variant-numeric:tabular-nums}
 .tbl th .ic{vertical-align:middle}
 .tbl .ck{width:16px}.ck input{display:block;width:16px;height:16px;margin:0;accent-color:var(--color-primary)}
@@ -784,7 +768,6 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .sbs{display:flex;flex-direction:column;gap:2px}
 .sbsh{padding:var(--c-sidebar-section-header-padding);@t(label-xs);font-size:var(--c-sidebar-section-header-font-size);color:var(--color-muted-foreground);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .sbi{display:flex;align-items:center;gap:var(--c-sidebar-item-gap);padding:var(--c-sidebar-item-padding);border-left:var(--c-sidebar-active-indicator);border-left-color:transparent;border-radius:var(--c-sidebar-radius);@t(label-sm);font-size:var(--c-sidebar-item-font-size);font-weight:var(--c-sidebar-item-font-weight);color:var(--color-foreground);text-decoration:none;white-space:nowrap;transition:background-color var(--motion-fast) var(--ease-out)}
-.sbi:hover{background:var(--color-muted)}
 .sbi.active{background:var(--color-muted);border-left:var(--c-sidebar-active-indicator)}
 .sbf{margin-top:auto}
 .sb.mini{width:var(--space-4xl)}
@@ -792,6 +775,20 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .sb.mini .sbi,.sb.mini .sbh,.sb.mini .sbf{justify-content:center}.sb.mini .sbf{display:flex}
 .sbmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-md);padding:var(--space-xl)}
 .sbmain h4{@t(title-h6);margin-bottom:var(--space-sm)}
+:root.switching *,:root.switching *::before,:root.switching *::after{transition:none!important}
+@media (hover:hover){
+  .sg a:hover{color:var(--color-foreground)}
+  .btn-primary:hover,.btn-destructive:hover{filter:brightness(.9)}
+  .btn-secondary:hover{background:var(--color-border)}
+  .btn-ghost:hover{border-color:var(--color-border)}
+  .opt:hover{background:var(--color-muted)}
+  .radio:hover input,.rcard:hover input{border-color:var(--color-primary)}
+  .rcard:hover{border-color:var(--color-primary)}
+  .tab:hover{color:var(--color-foreground)}
+  .tbl tbody tr:hover{background:var(--c-table-hover-background)}
+  .sbi:hover{background:var(--color-muted)}
+  .mrow:hover .track i{transform:translateX(228px)}
+}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition-duration:0s!important;transition-delay:0s!important;animation-duration:0s!important}
 }
@@ -811,6 +808,14 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
   .mrow{grid-template-columns:1fr;gap:var(--space-sm)}
   .cmp{padding:var(--space-lg)}
 }
+@media (max-width:600px){
+  .ribbon{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tsample{white-space:normal;overflow:visible;text-overflow:clip}
+}
+@media (max-width:470px){
+  .g3>:last-child{grid-column:1/-1}
+}
+
 """).strip()
 
 PAGE_JS = """
@@ -856,7 +861,14 @@ PAGE_JS = """
     history.replaceState(null, '', a.hash);
   });
   const tone = document.getElementById('tone'), q = document.getElementById('q');
-  tone.addEventListener('change', () => { root.dataset.tone = tone.value; filter(); });
+  tone.addEventListener('change', () => {
+    // Suppress transitions for the theme swap, then restore them next frame.
+    root.classList.add('switching');
+    root.dataset.tone = tone.value;
+    void root.offsetWidth;
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('switching')));
+    filter();
+  });
 
   // Nav: highlight the section (and component card) in view; mirror it in the breadcrumb.
   const navLinks = $('.snav a, .mnav a'), crumb = document.getElementById('crumb');
@@ -935,7 +947,9 @@ PAGE_JS = """
     $('main section').forEach(s => { s.hidden = false; });
     $('.grp').forEach(g => { g.hidden = !!t && !$('[data-s]', g).some(i => !i.hidden); });
     $('main section').forEach(s => { s.hidden = !!t && !$('[data-s]', s).some(i => i.getClientRects().length); });
-    document.querySelector('.nomatch').hidden = !t || $('main section').some(s => !s.hidden);
+    const any = $('main section').some(s => !s.hidden);
+    document.querySelector('.nomatch').textContent = t && !any
+      ? `No tokens or components match “${q.value.trim()}”. Clear the search with Esc.` : '';
     spy();
   }
   q.addEventListener('input', filter);
@@ -965,24 +979,62 @@ PAGE_JS = """
     });
   });
 
-  // Select: toggle popup, pick an option.
+  // Select: listbox keyboard (the button keeps focus, aria-activedescendant tracks the option).
   $('.selw').forEach(w => {
     const b = w.querySelector('.sel'), p = w.querySelector('.pop');
-    const toggle = () => { const open = !p.classList.toggle('closed'); b.classList.toggle('open', open); b.setAttribute('aria-expanded', open); };
-    b.addEventListener('click', toggle);
-    $('.opt:not(.dis)', w).forEach(o => o.addEventListener('click', () => {
-      $('.opt', w).forEach(x => x.classList.toggle('selected', x === o));
-      b.querySelector('.val').textContent = o.textContent; toggle();
-    }));
+    const opts = $('.opt:not([aria-disabled=true])', w);
+    let active = opts.find(o => o.classList.contains('hl')) || opts.find(o => o.getAttribute('aria-selected') === 'true') || opts[0];
+    const isOpen = () => b.getAttribute('aria-expanded') === 'true';
+    const setActive = o => {
+      if (!o) return;
+      active = o;
+      opts.forEach(x => x.classList.toggle('hl', x === o));
+      b.setAttribute('aria-activedescendant', o.id);
+    };
+    const open = () => { p.classList.remove('closed'); b.classList.add('open'); b.setAttribute('aria-expanded', 'true'); setActive(active); };
+    const close = () => { p.classList.add('closed'); b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); b.removeAttribute('aria-activedescendant'); };
+    const pick = o => {
+      opts.forEach(x => {
+        const on = x === o;
+        x.classList.toggle('selected', on);
+        x.setAttribute('aria-selected', String(on));
+      });
+      b.querySelector('.val').textContent = o.textContent;
+      close(); b.focus();
+    };
+    b.addEventListener('click', () => { if (isOpen()) close(); else open(); });
+    b.addEventListener('keydown', e => {
+      const i = opts.indexOf(active);
+      const k = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: opts.length - 1 }[e.key];
+      if (k !== undefined) {
+        e.preventDefault();
+        if (!isOpen()) open();
+        setActive(opts[(k + opts.length) % opts.length]);
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (isOpen()) pick(active); else open();
+      } else if (e.key === 'Escape') close();
+      else if (e.key === 'Tab') close();
+    });
+    opts.forEach(o => {
+      o.addEventListener('click', () => pick(o));
+      o.addEventListener('pointermove', () => setActive(o));
+    });
+    document.addEventListener('pointerdown', e => { if (!w.contains(e.target)) close(); });
+    if (isOpen()) setActive(active);
   });
 
   $('.tbl tbody input').forEach(c => c.addEventListener('change', () => c.closest('tr').classList.toggle('selected', c.checked)));
-  $('[data-collapse]').forEach(b => b.addEventListener('click', () => b.closest('.sb').classList.toggle('mini')));
+  $('[data-collapse]').forEach(b => b.addEventListener('click', () => {
+    const mini = b.closest('.sb').classList.toggle('mini');
+    b.setAttribute('aria-expanded', String(!mini));
+    b.setAttribute('aria-label', mini ? 'Expand sidebar' : 'Collapse sidebar');
+  }));
 })();
 """.strip()
 
 SECTIONS = [("overview", "Overview", ""), ("principles", "Principles", "What this tone believes, from its Overview."),
-            ("color", "Color", "Semantic roles first, then the tone's palette and project additions. Ratios are WCAG 2."),
+            ("color", "Color", "Semantic roles first, then the tone's palette and project additions. Ratios use the WCAG 2.2 AA thresholds."),
             ("typography", "Typography", "Families, then the full 16-step scale at real size."),
             ("spacing", "Spacing", "The spacing scale. Pick a step; never invent in-between values."),
             ("radius", "Radius", "The radius scale as rendered corners."),
@@ -1005,7 +1057,7 @@ def build(entries, ptype, core_body, comp_matrix):
     for sid, title, sub in SECTIONS:
         head = "" if sid == "overview" else (f'<h2 class="sec t-title-h3">{title}</h2>'
                                              + (f'<p class="sub">{esc(sub)}</p>' if sub else ""))
-        body = components(proj["tree"], core_body, ptype, comp_matrix) if sid == "components" else per_tone(renderers[sid])
+        body = components(proj["tree"], ptype, comp_matrix) if sid == "components" else per_tone(renderers[sid])
         sections.append(f'<section id="{sid}" data-title="{title}">{head}{body}</section>')
 
     steps = list(dict.fromkeys(n for e in entries for n, _ in type_steps(e["tree"])))
