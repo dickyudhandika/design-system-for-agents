@@ -1,106 +1,90 @@
-# design-system-for-agents
+# design-system-for-agents (ds4a)
 
-> A portable taste layer for AI coding agents. A living DESIGN.md library that starts with a designer's curated taste and compounds with every project. Developers ship world-class UI without learning design.
+> A reusable design library for AI coding agents. One set of fundamentals, many tones. Detects the design system a project already has, or starts from a neutral baseline and grows.
 
 ## What it is
 
-A Hermes skill (also usable by any AI agent that reads project files) that makes AI-generated UI visibly better and gets smarter with every project.
+A skill (usable by any agent that reads project files) that makes AI-generated UI visibly better and gets smarter with every project.
 
-**Three commands power the full loop:**
+```
+library/core.md  +  library/tones/<tone>.md  +  .ds4a/project.md   →   DESIGN.md
+ fundamentals         look: tokens + personality   this project's deltas   what the agent reads
+```
+
+- **Core** — component contracts (anatomy, states, accessibility) and universal guardrails. Tone-free: no hex, no pixel values a tone could change.
+- **Tones** — token values plus the rules that exist because of a look. `neutral` (default, no personality) and `warm-sharp` (the original ds4a look) ship today. Add more with `/ds4a tone new <name>`.
+- **Project overlay** — what's detected from the project (colors, type, radius…) plus per-project overrides. Only the differences.
+
+## Commands
+
+Invoke as `/ds4a <subcommand>`.
 
 | Command | What happens |
 |---|---|
-| `ds4a init [type]` | Detect baseline → install/convert → generate project DESIGN.md |
-| *(build normally)* | Agent reads DESIGN.md, generates UI. Skill stays out. |
-| `ds4a review` | Three-pass analysis on generated code. Interactive approve/reject. |
-| `ds4a merge` | Merge approved rules into `.ds4a/library.md` in-place. |
-
-**Preview:** open `preview/index.html` — a live, browser-viewable showcase of all 13 core contracts, navigated by a sidebar that is itself the Sidebar contract. No server, no build; works offline.
+| `/ds4a init [type]` | Detect existing design system → overlay → `DESIGN.md` → preview |
+| `/ds4a detect` | Dry run: what would be imported. Writes nothing |
+| `/ds4a tone` / `tone <name>` / `tone new <name>` | List, switch, or fork a tone |
+| `/ds4a resolve` | Regenerate `DESIGN.md` from the layers |
+| `/ds4a preview` | Tone-aware preview page in `.ds4a/preview.html` |
+| `/ds4a review` | Three-pass review of generated code, approve/reject each suggestion |
+| `/ds4a merge` | Merge approved rules to the project, a tone, or core |
+| `/ds4a status` | Active tone, type, versions, pending review |
 
 **The loop:**
 ```
-new project → ds4a init → build with AI → ds4a review → approve rules → ds4a merge → library grows → repeat
+new project → /ds4a init → build with AI → /ds4a review → approve → /ds4a merge → library grows
 ```
 
-By project 10, the library isn't your defaults anymore — it's your design DNA.
+## The four cases
 
-## Core component default
+1. **Reuse at scale.** The library lives in this repo (`library/`). Every project resolves from the same copy; merges write back to it, so project 10 starts from everything projects 1–9 taught it.
+2. **Several tones, same fundamentals.** Switch with `/ds4a tone <name>`. Change one radius step and every component follows (`rounded.md` → buttons, cards…). The contracts never change.
+3. **Project already has a system.** Detection reads AGENTS.md, `tokens.*`, shadcn `globals.css` (oklch → hex), Tailwind v4 `@theme`, `design-tokens.ts`, `tailwind.config`. Found tokens go in the overlay and win; gaps fall back to `neutral`. Nothing you own is overwritten.
+4. **Project has nothing.** `neutral` tone: system fonts, grays, one action color, small radii, 4px grid, on top of the 13 core contracts (anatomy modeled on Base UI's unstyled parts). Grow it per project in the overlay, or fork it into a tone.
 
-The baseline ships with **13 core component contracts** — benchmarked against UXPin's essential-components list, the shadcn/ui registry (63 components), and Base UI v1.6.0 (38 components). Button, Input, Field/Form, Select, RadioGroup, Card, Badge, Modal, Tabs, Table, Sidebar — every project starts from this floor.
+## Core components
 
-Contracts added by your reviews are marked `(grown)`. A grown contract used across 3+ projects earns a promotion to core. The floor grows as you build — it never shifts under you. See [core-components.md](references/core-components.md) for the benchmark and tier rules.
+13 core contracts — Button, Input, Field/Form/Fieldset, Select, RadioGroup, Card, Badge, Modal, Tabs, Table, Sidebar — benchmarked against UXPin's essential-components list, the shadcn/ui registry and Base UI. Contracts added by reviews carry `(grown)`; a grown contract used by 3+ projects (`library/usage.md`) is offered for promotion to core. See [core-components.md](references/core-components.md).
 
 ## Install
 
-### As a Hermes skill
-
 ```bash
-cd ~/.hermes/profiles/<your-profile>/skills/design/
+cd ~/.agents/skills        # or your agent's skills directory
 git clone https://github.com/dickyudhandika/design-system-for-agents.git ds4a
 ```
 
-Skill auto-registers. Use `ds4a init`, `ds4a review`, `ds4a merge` in chat.
+Requires `python3` (standard library only) for `scripts/resolve.py` and `scripts/build-preview.py`.
 
-### With other AI agents (Cursor, Claude Code, Copilot, etc.)
-
-```bash
-git clone https://github.com/dickyudhandika/design-system-for-agents.git
-```
-
-Copy `references/master-library.md` into your project as `DESIGN.md`. Your AI agent reads it as project context. Copy `references/review-prompt.md` for post-project reviews.
-
-### shadcn/ui projects
-
-`ds4a init` detects shadcn CSS variables in `globals.css` and **imports your customized theme — never overwrites it.** oklch values are converted to hex, your variables map onto the ds4a token schema, guardrails are generated from your theme's patterns, and an AA contrast check runs on `muted-foreground`. You keep your theme; you gain the contracts, guardrails, and review loop.
+Without a skill runner: `python3 scripts/resolve.py --tone neutral --stdout > DESIGN.md` and give your agent the file.
 
 ## What's inside
 
-| File | Lines | What |
-|---|---|---|
-| `SKILL.md` | 439 | Operational loop definition (init, review, merge) |
-| `references/master-library.md` | 734 | Curated baseline — 13 core component contracts, 44 guardrails, 10-item pre-flight checklist |
-| `references/core-components.md` | 71 | Benchmark table (UXPin × shadcn × Base UI), core/grown/promoted tiers, promotion rules |
-| `references/review-prompt.md` | 352 | Three-pass analysis: violation detection, pattern detection, gap detection |
-| `references/project-generator-prompt.md` | 242 | Slim subset extractor — 8 project types, 13×8 component matrix |
-| `references/component-matrix.md` | 52 | Component relevance + layout rules matrices |
-| `references/shadcn-baseline.md` | 154 | shadcn theme import: variable mapping, radius conversion, guardrail derivation |
-| `templates/project-design.md` | 66 | Blank DESIGN.md template |
-| `scripts/oklch-to-hex.py` | 105 | oklch → hex converter for shadcn theme import |
-| `preview/index.html` | 1515 | Live browser showcase — 13 contracts + foundations, self-dogfooding |
-
-## Design aesthetic
-
-The curated baseline uses:
-- **Warm white** background (`#FDFCF8`) — paper-like, not clinical
-- **Sharp edges** — all radius 0px. Deliberate, not missing
-- **Blue accent** (`#1A5EFF`) — CTAs and active states only
-- **Fauna One + Inter** — serif titles, sans-serif body
-- **4px spacing grid** — consistent rhythm
-
-Change any of these in your `.ds4a/library.md` — the system works with any aesthetic.
+| Path | What |
+|---|---|
+| `SKILL.md` | Command router and workflow |
+| `library/core.md` | Tone-free contracts and guardrails |
+| `library/tones/` | `neutral.md`, `warm-sharp.md` |
+| `library/usage.md` | Which projects used which grown contracts |
+| `scripts/resolve.py` | Layers → `DESIGN.md`, with contrast and matrix-parity checks |
+| `scripts/build-preview.py` | Tokens → `.ds4a/preview.html` |
+| `scripts/oklch-to-hex.py` | shadcn oklch → hex |
+| `references/` | detection, shadcn mapping, review prompt, matrix, core benchmark, pitfalls |
+| `templates/project-overlay.md` | Starting overlay |
+| `preview/index.html`, `templates/*.tsx/.astro`, `scripts/build-preview-html.ts` | Legacy showcase and in-framework `/design-system` references |
 
 ## Which AI agents work
 
-Any agent that reads project files:
-- ✅ Hermes (native skill)
-- ✅ Cursor
-- ✅ Claude Code
-- ✅ Copilot
-- ✅ Codex
-- ✅ v0
-- ✅ Lovable
+Anything that reads project files: Claude Code, Codex, Cursor, Copilot, Hermes, v0, Lovable.
 
 ## FAQ
 
-**Do I need to know design?** No. Copy the file, your AI gets better, approve suggestions with yes/no.
+**Do I need to know design?** No. Pick or import a tone, approve suggestions with yes/no.
 
-**Is it framework-specific?** No. DESIGN.md is framework-agnostic. React, Vue, Svelte, Astro, plain HTML.
+**Is it framework-specific?** No. `DESIGN.md` is framework-agnostic.
 
-**I use shadcn — will it overwrite my theme?** No. `ds4a init` detects shadcn variables in `globals.css` and imports your theme into the DESIGN.md format: oklch → hex conversion, variable mapping, generated guardrails, contrast check. `globals.css` and every existing file are untouched — ds4a only writes `.ds4a/library.md` and `DESIGN.md`.
+**Will it overwrite my theme or my DESIGN.md?** No. Only `DESIGN.md` (if it's ds4a-generated) and `.ds4a/` are written; `resolve.py` refuses to overwrite a DESIGN.md it didn't generate.
 
-**Non-destructive?** Yes. DESIGN.md sits alongside your existing files. AGENTS.md, tokens.css, globals.css, tailwind.config.js — all untouched.
-
-**How is this different from Cursor Rules?** Cursor Rules are manual. This system: AI suggests rules, you approve, library grows automatically. Your only interaction is yes/no.
+**What does the contrast check do?** `resolve.py` warns when `foreground`, `muted-foreground`, or button text fail WCAG AA against their backgrounds. `warm-sharp`'s `muted-foreground` (`#A1A1A1` on `#FDFCF8`) currently fails at 2.5:1 — it's kept as-is so the original look is preserved, but the warning is real.
 
 ## License
 
@@ -108,8 +92,8 @@ MIT
 
 ## Roadmap
 
-- [ ] CLI tool (`ds4a` npm package) — same loop, terminal-based, for non-Hermes users
-- [ ] Multiple base libraries — different aesthetics (soft/friendly, dark/technical)
-- [ ] Vision check — screenshots + vision AI to catch visual issues code can't
+- [x] Multiple base libraries (tones)
+- [ ] More tones (soft/friendly, dark/technical)
+- [ ] Dark-mode tokens per tone
+- [ ] Vision check — screenshots + vision AI for issues code can't catch
 - [ ] Team libraries — shared evolution across developers
-- [ ] Marketplace — designers sell their taste as base libraries

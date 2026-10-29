@@ -1,6 +1,6 @@
 # Design System Review — B Loop Trigger
 
-> Copy this prompt into your AI agent along with your generated code files and your current DESIGN.md. The AI will analyze the code, find patterns worth codifying, and output suggestions you can approve and merge into your master library.
+> Copy this prompt into your AI agent along with your generated code files and your current DESIGN.md. The AI will analyze the code, find patterns worth codifying, and output suggestions you can approve and merge into your library (project overlay, a tone, or core).
 
 ## Your Role
 
@@ -124,6 +124,7 @@ For each suggestion, output in this exact format:
 ---
 ## Suggested Rule: [kebab-case-name]
 **Type:** token | prose-rule | guardrail | component-contract
+**Target:** project | tone:<name> | core
 **Confidence:** high (3+ occurrences) | medium (2 occurrences) | low (1 occurrence — observation only)
 **Pass:** violation | pattern | gap
 
@@ -161,7 +162,7 @@ If a suggestion fails ANY check, do not output it.
 
 Before suggesting, read the DESIGN.md's:
 
-- **Overview section** — what is the design personality? Suggestions must match.
+- **Overview section** — what is the design personality of the active tone? Suggestions must match.
 - **Do's and Don'ts** — what guardrails exist? Suggestions must not contradict.
 - **Component contracts** — what patterns are already codified? Suggestions should extend, not replace.
 
@@ -266,6 +267,18 @@ Why this fails: vague ("consistent spacing" — which values? which scale?), no 
 
 Why this fails: **taste mismatch** — the DESIGN.md Overview states "sharp edges, not rounded. All radius values are 0px. This is deliberate." This suggestion contradicts the existing aesthetic. **Discard silently.**
 
+### Choosing the Target
+
+Every suggestion names where it should live. Pick the narrowest target that is true:
+
+| Target | Pick it when | Where it lands |
+|---|---|---|
+| `project` (default) | The rule fits this project's look or content only. | `.ds4a/project.md` overlay |
+| `tone:<name>` | The rule exists because of the tone (a color rule, a radius philosophy, a font role) and would apply to any project using that tone. | `library/tones/<name>.md` |
+| `core` | The rule is a fundamental: anatomy, states, accessibility, behavior. It must contain **no tone values** — reference tokens (`color.primary`, `spacing.xl`) or `{{placeholders}}`, never raw hex/px a tone could change. | `library/core.md` |
+
+If a suggestion hard-codes a tone value (e.g. "cards use 24px padding") it is a `tone` or `project` rule, not `core`. When unsure, choose `project`.
+
 ## Suggestion Types
 
 ### Token
@@ -341,7 +354,7 @@ After all suggestions, output this summary block:
 **Next steps:**
 1. Review each suggestion above
 2. Approve or reject each one
-3. Approved rules merge into your master library
+3. Approved rules merge to their target: the project overlay, a tone pack, or core
 4. Next project generates from the richer library
 ---
 ```

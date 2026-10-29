@@ -2,7 +2,7 @@
 """oklch → hex conversion for shadcn/ui theme vars.
 
 Reads CSS custom properties (oklch or hex) from stdin or a file and prints
-the same vars converted to hex. Used by ds4a init Scenario D (shadcn baseline).
+the same vars converted to hex. Used by ds4a detection of shadcn themes (references/shadcn-baseline.md).
 
 Usage:
     cat globals.css | python3 oklch-to-hex.py

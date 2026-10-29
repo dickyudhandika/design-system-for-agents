@@ -1,4 +1,4 @@
-# shadcn/ui Baseline Import (ds4a Scenario D)
+# shadcn/ui Baseline Import (ds4a detection source)
 
 When a project uses shadcn/ui (or the user customized a theme at
 https://ui.shadcn.com/create), ds4a imports the theme from `globals.css`
@@ -8,7 +8,7 @@ instead of installing the curated default. The user's theme is the
 
 ## Detection
 
-Scenario D triggers when the project has shadcn-style CSS variables:
+shadcn is detected (see `references/detection.md`) when the project has shadcn-style CSS variables:
 
 ```css
 :root {
@@ -28,7 +28,7 @@ or `@radix-ui` / `@base-ui` in package.json.
 1. Read globals.css → extract :root (light) + .dark blocks
 2. Convert oklch → hex      → scripts/oklch-to-hex.py
 3. Map shadcn vars → ds4a YAML frontmatter tokens
-4. Derive guardrails from theme patterns (same logic as Scenario C)
+4. Derive guardrails from theme patterns (see `references/detection.md` §4)
 5. Generate DESIGN.md — hex values, oklch source noted in frontmatter comment
 6. Report: "Found shadcn theme. Imported [N] tokens from globals.css.
    DESIGN.md generated."
@@ -55,8 +55,8 @@ or `@radix-ui` / `@base-ui` in package.json.
 | `--sidebar*` | colors.sidebar.* | Sidebar surface tokens |
 
 **ds4a tokens NOT covered by shadcn:** typography, spacing, shadows,
-motion. These come from the master library defaults (ds4a owns taste for
-non-color axes). If the project has Tailwind config with fonts/spacing,
+motion. These come from the `neutral` tone (or the tone named in
+`.ds4a/project.md`) — ds4a owns structure for non-color axes. If the project has Tailwind config with fonts/spacing,
 merge those in too.
 
 ## Radius Conversion
@@ -95,7 +95,7 @@ Default to light-only unless the user asks for dark.
 
 ## Guardrail Derivation
 
-Same rules as Scenario C, applied to imported values:
+Same derivation rules as `references/detection.md` §4, applied to imported values:
 
 - If `--primary` is saturated → "primary for CTAs and active states only"
 - If `--destructive` exists → "destructive for errors only"
@@ -148,7 +148,7 @@ name instead of inventing a new anatomy. ds4a owns the *taste decisions*
 - ✅ Do import the user's customized theme — it's the source of truth.
 - ✅ Do convert oklch → hex; keep the source noted in frontmatter comment.
 - ✅ Do map `--ring` to focus-ring; fall back to primary if absent.
-- ✅ Do keep typography/spacing/shadows from the ds4a master library.
+- ✅ Do keep typography/spacing/shadows from the project's tone (`neutral` by default).
 - ❌ Don't overwrite the user's globals.css. DESIGN.md is additive.
 - ❌ Don't invent tokens that don't exist in the theme.
 - ❌ Don't skip the AA contrast check on muted-foreground.

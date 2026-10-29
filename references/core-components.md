@@ -1,7 +1,7 @@
 # Core Component Default
 
 What "basic components" means in ds4a — benchmarked, not guessed. Every library
-installed by `ds4a init` starts from this floor, then grows via the merge loop.
+installed by `/ds4a init` starts from this floor, then grows via the merge loop.
 
 ## Benchmark
 
@@ -33,14 +33,15 @@ Sources:
 | Tooltip / Popover | — | ✅ | ✅ | — | grown-candidate |
 
 12 named contracts (Field/Form/Fieldset counted as one family) = 13 matrix
-components. All 13 have contracts in `master-library.md` — matrix parity is a
-validated invariant, not an assumption.
+components. All 13 have contracts in `library/core.md` — matrix parity is a
+validated invariant, not an assumption (`scripts/resolve.py` warns when a
+matrix component has no contract).
 
 ## Tiers
 
-1. **Core** — the 13 contracts above. Shipped in the baseline. Every
-   `.ds4a/library.md` installed by Scenario A contains all 13. Every project
-   DESIGN.md includes only the ones its project-type matrix allows.
+1. **Core** — the 13 contracts above, in `library/core.md`. They are tone-free:
+   every tone resolves all 13. Every project DESIGN.md includes only the ones
+   its project-type matrix allows.
 2. **Grown** — any contract added via `ds4a merge`. Its `###` header gets an
    `(grown)` marker: `### Checkbox (grown)`. Same format rules as core
    contracts. Version bumps per merge rules.
