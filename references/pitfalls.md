@@ -22,7 +22,7 @@
   then run `resolve.py --tone <t> --check` for each.
 - **Version fields live in the layer that changed.** Bump `version` in the core,
   tone, or overlay file that received a merge. No `library-v2.md` copies.
-- **No auto-triggering.** The developer types `/ds4a ...`. Don't suggest `review`
+- **No auto-triggering.** The developer types `/ds4a ...`. Don't suggest `diff`
   unprompted; never merge a suggestion that wasn't approved individually.
 - **Taste lock.** Review must read the active tone's Overview and Do's/Don'ts.
   A suggestion that contradicts the tone (rounded corners on a sharp tone) is

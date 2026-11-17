@@ -71,6 +71,28 @@ Common gaps to check:
 - Layout patterns for page types not mentioned (sidebar, hero, grid)
 - Error/loading/empty states not covered by existing rules
 
+### Coverage Scan: what the preview doesn't show
+
+The preview (`.ds4a/preview.html`) renders only what DESIGN.md defines: the resolved
+tokens and the component contracts. Anything the code uses that DESIGN.md doesn't
+define is **invisible in the preview**. Find it.
+
+1. **Components.** List every reusable component in the code (files under
+   `components/**`, or any element structure repeated 2+ times). Match each against
+   the contracts in DESIGN.md `## Components`. A component with no contract is
+   uncovered. Skip pure layout wrappers and one-off page sections.
+2. **Tokens.** Collect every color, font family, font size, radius, spacing value
+   and shadow the code uses, including raw values and CSS variables that exist in
+   the project's own CSS but not in the resolved frontmatter. A value with no token
+   is uncovered.
+3. **Report each as a coverage finding**, even when it appears only once or twice.
+   Occurrence thresholds don't apply here, because the question is "is it
+   defined?", not "is it repeated?".
+
+For each finding, give the proposed contract or token, so merging it makes the item
+appear in the preview next time. If the code already has a token under another
+name, suggest mapping to it instead of adding a duplicate.
+
 ## Concrete Scan Checklist
 
 While running the three passes, check these specific things. This is not optional — scan every item.
@@ -126,7 +148,7 @@ For each suggestion, output in this exact format:
 **Type:** token | prose-rule | guardrail | component-contract
 **Target:** project | tone:<name> | core
 **Confidence:** high (3+ occurrences) | medium (2 occurrences) | low (1 occurrence — observation only)
-**Pass:** violation | pattern | gap
+**Pass:** violation | pattern | gap | coverage
 
 **YAML:** [if token — valid YAML line for DESIGN.md frontmatter]
 **Prose:** [if prose-rule or guardrail — markdown text for DESIGN.md prose section]
@@ -344,6 +366,7 @@ After all suggestions, output this summary block:
 **Violations found:** [N]
 **Patterns detected:** [N] ([M high confidence, K medium, L low])
 **Gaps found:** [N]
+**Not in preview:** [N components, M tokens]
 
 **Suggested merges:**
 - [N] tokens → add to YAML frontmatter
@@ -361,6 +384,6 @@ After all suggestions, output this summary block:
 
 ## Execution
 
-Begin analysis now. Read the generated code files and the DESIGN.md provided. Run all three passes. Output violations first, then patterns (high → medium → low confidence), then gaps. End with the Review Summary.
+Begin analysis now. Read the generated code files and the DESIGN.md provided. Run all three passes and the coverage scan. Output violations first, then patterns (high → medium → low confidence), then gaps, then coverage findings. End with the Review Summary.
 
 Do not ask questions. Do not request clarification. Analyze what you have and output what you find. If something is ambiguous, note it as a low-confidence observation.

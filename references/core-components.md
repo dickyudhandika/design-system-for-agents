@@ -47,7 +47,7 @@ matrix component has no contract).
    contracts. Version bumps per merge rules.
 3. **Promoted** — a grown contract that keeps proving itself. When a grown
    contract has been included in 3+ separate project DESIGN.md generations,
-   `ds4a review` outputs a promotion suggestion:
+   `ds4a diff` outputs a promotion suggestion:
    `Promote [X] to core? [y/n]`. On yes: remove the `(grown)` marker and add
    it to the Core list here and in the project-type matrix.
 

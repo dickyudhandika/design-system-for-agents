@@ -10,7 +10,7 @@ It does three things:
 
 1. **Detects.** It looks for a design system you already have — `AGENTS.md`, `tokens.json`, shadcn's `globals.css`, Tailwind v4 `@theme`, `tailwind.config`, `design-tokens.ts` — and imports what's there. If there isn't one, it starts from a neutral baseline.
 2. **Resolves.** The core fundamentals, one *tone* (the look), and your project's own overrides collapse into a single file: `DESIGN.md`. That file is what your agent reads when it builds.
-3. **Grows.** After you build, `/ds4a review` finds where your agent drifted from the rules and proposes fixes. You approve them; `/ds4a merge` writes them back — to the project, to the tone, or to the shared library. Project 10 starts with everything projects 1–9 taught it.
+3. **Grows.** After you build, `/ds4a diff` finds where your agent drifted from the rules and proposes fixes. You approve them; `/ds4a merge` writes them back — to the project, to the tone, or to the shared library. Project 10 starts with everything projects 1–9 taught it.
 
 Short version: **it makes AI-generated UI consistent instead of random, and it remembers what you taught it.**
 
@@ -49,12 +49,12 @@ Resolution is deterministic and self-checking: `scripts/resolve.py` merges the l
 ### The loop
 
 ```
-new project → /ds4a init → build with AI → /ds4a review → approve → /ds4a merge → library grows
+new project → /ds4a init → build with AI → /ds4a diff → approve → /ds4a merge → library grows
 ```
 
-`/ds4a init` detects (or invents) a system, writes the overlay, resolves `DESIGN.md`, and opens the preview. You build. Then `/ds4a review` reads your code against the rules in three passes — violations, repeated-but-uncodified patterns, and gaps where the agent had to guess. You approve the good ones, and `/ds4a merge` files each one to the right layer.
+`/ds4a init` detects (or invents) a system, writes the overlay, resolves `DESIGN.md`, and opens the preview. You build. Then `/ds4a diff` reads your code against the rules in three passes — violations, repeated-but-uncodified patterns, and gaps where the agent had to guess. You approve the good ones, and `/ds4a merge` files each one to the right layer.
 
-Nothing happens automatically. Review and merge only run when you ask.
+Nothing happens automatically. Diff and merge only run when you ask.
 
 ## Commands
 
@@ -67,7 +67,7 @@ Invoke as `/ds4a <subcommand>`.
 | `/ds4a tone` / `tone <name>` / `tone new <name>` | List, switch, or fork a tone |
 | `/ds4a resolve` | Regenerate `DESIGN.md` from the layers |
 | `/ds4a preview` | Build and open the design-system page `.ds4a/preview.html` |
-| `/ds4a review` | Three-pass review of generated code, approve/reject each suggestion |
+| `/ds4a diff` | Diff generated code against DESIGN.md (violations, patterns, gaps, preview coverage), approve/reject each suggestion |
 | `/ds4a merge` | Merge approved rules to the project, a tone, or core |
 | `/ds4a status` | Active tone, type, versions, pending review |
 

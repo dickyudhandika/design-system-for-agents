@@ -5,7 +5,7 @@ description: >-
   Detects a project's existing design system (or starts from a neutral Base
   UI-style baseline), resolves core + tone + project overlay into DESIGN.md,
   reviews generated code, and merges approved rules back. Use for `/ds4a init`,
-  `/ds4a tone`, `/ds4a review`, `/ds4a merge`, or when the user wants a design
+  `/ds4a tone`, `/ds4a diff`, `/ds4a merge`, or when the user wants a design
   system for their AI agent.
 version: 2.0.0
 author: thenom4design
@@ -45,7 +45,7 @@ runs automatically.
 | `/ds4a tone new <name>` | Fork the current resolved look into `library/tones/<name>.md` |
 | `/ds4a resolve` | Regenerate `DESIGN.md` from core + tone + overlay |
 | `/ds4a preview` | Build and open `.ds4a/preview.html` for the active tone |
-| `/ds4a review` | Three-pass review of generated code; approve/reject each suggestion |
+| `/ds4a diff` | Diff generated code against DESIGN.md (violations, patterns, gaps, preview coverage); approve/reject each suggestion |
 | `/ds4a merge` | Merge approved rules to their target (project, tone, or core) |
 | `/ds4a status` | Initialized? active tone, type, library versions, pending review |
 
@@ -135,10 +135,10 @@ nothing, not even the overlay.
 ## Build (no skill action)
 
 The agent reads `DESIGN.md` and builds. A component the contracts don't cover is
-built from the tokens and guardrails; `review` will catch it and propose a
+built from the tokens and guardrails; `diff` will catch it and propose a
 contract.
 
-## /ds4a review
+## /ds4a diff
 
 Explicit only. Three passes over generated code, as defined in
 `references/review-prompt.md`.
@@ -147,7 +147,9 @@ Explicit only. Three passes over generated code, as defined in
    `DESIGN.md`. For taste lock, also read the active tone's Overview.
 2. **Pass 1 — violations** against rules in DESIGN.md (cite rule + `file:line`).
    **Pass 2 — patterns** repeated 3+ times but not codified. **Pass 3 — gaps**
-   where the agent guessed.
+   where the agent guessed. **Coverage scan** — components and tokens the code
+   uses that DESIGN.md doesn't define, so they are missing from the preview (no
+   repeat threshold; one use is enough).
 3. **Quality filter** — every suggestion must be specific, applicable,
    preventive, taste-matched, evidence-backed. Otherwise drop it silently.
 4. **Target** each suggestion: `project` (default), `tone:<name>`, or `core`
@@ -160,7 +162,7 @@ Explicit only. Three passes over generated code, as defined in
 
 ## /ds4a merge
 
-Explicit only. Reads `.ds4a/pending.md` (none → "Run `/ds4a review` first").
+Explicit only. Reads `.ds4a/pending.md` (none → "Run `/ds4a diff` first").
 
 | Target | File | Type → place |
 |---|---|---|
