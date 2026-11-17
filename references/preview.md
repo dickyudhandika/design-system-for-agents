@@ -1,6 +1,6 @@
 # Preview
 
-`/ds4a preview` runs:
+`/ds4a init`, `/ds4a tone`, and `/ds4a diff` rebuild the preview. The direct call:
 
 ```bash
 python3 <skill>/scripts/build-preview.py --project .   # writes .ds4a/preview.html

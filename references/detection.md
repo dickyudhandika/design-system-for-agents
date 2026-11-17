@@ -1,7 +1,7 @@
 # Detection — find the project's existing design system
 
-`/ds4a init` and `/ds4a detect` run this flow. It reads, never writes, project
-files. The only output is `.ds4a/project.md` (the overlay), and `detect` doesn't
+`/ds4a init` and `init --check` run this flow. It reads, never writes, project
+files. The only output is `.ds4a/project.md` (the overlay), and `--check` doesn't
 even write that.
 
 ```

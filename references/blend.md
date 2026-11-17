@@ -1,7 +1,7 @@
 # Blend — migrate a hand-written DESIGN.md
 
-A project can arrive with a design doc it already trusts. `/ds4a blend` treats
-that doc as a **source**, not a target:
+A project can arrive with a design doc it already trusts. `/ds4a init --adopt`
+(which runs `scripts/blend.py`) treats that doc as a **source**, not a target:
 
 ```
 read DESIGN.md (frontmatter + tables) + read code tokens
@@ -20,6 +20,9 @@ The layers stay the source of truth. The old doc never becomes a second live
 source: after adoption it is a backup, and `DESIGN.md` is generated.
 
 ## Commands
+
+There is no separate slash command; `init` calls this when a hand-written
+`DESIGN.md` exists and the user chooses adopt. Direct script use:
 
 ```bash
 python3 <skill>/scripts/blend.py --project .                    # report only

@@ -1,6 +1,7 @@
 # ds4a Vision — the living design system loop
 
-Status: **shipped in v2.2.0** (2026-11-17). This document is the record of the
+Status: **shipped in v2.2.0** (2026-11-17); command surface simplified to
+`init`, `diff`, `tone`, and `apply` in v2.3.0. This document is the record of the
 loop the library now runs: detect → preview → build → codify. Every phase below
 is implemented; the non-goals still hold. Open questions that were resolved are
 marked with the decision; the rest stay open.
@@ -75,7 +76,7 @@ system.
 - [x] Contracts the project excluded (overlay) are hidden from the preview
       (already true) and replaced by its specimens where one exists (a specimen
       may declare `contract: <Name>`; the Contracts matrix reports it).
-- [x] `/ds4a specimens` (and part of `diff`): candidate detection — files under
+- [x] `diff`'s specimen pass (scripts remain): candidate detection — files under
       `src/components/` (and astro/react/svelte equivalents) with no matching
       specimen or contract — presented as an add/skip list.
 
@@ -88,7 +89,7 @@ and "this component has no specimen". Phase 3 makes that detection productive:
       `specimens.py add <slug> --from <file>` writes
       `.ds4a/specimens/<name>.html` from the component's markup, registers it in
       the overlay, rebuilds the preview.
-- [x] `merge` gains target `preview`: a merged rule can ship with a specimen,
+- [x] `diff`'s merge step gains target `preview`: a merged rule can ship with a specimen,
       so "approved into the design system" literally means "renders on the page".
 - [x] Net effect: shipping a new component with `/ds4a` costs one approval and
       appears in the preview — the loop closes with zero ceremony.

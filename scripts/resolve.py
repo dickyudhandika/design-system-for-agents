@@ -505,7 +505,7 @@ def resolve(lib, tone, overlay_path, ptype):
         layers += " + project overlay"
     header = [
         "<!--",
-        f"{MARKER} — do not edit by hand. Edit .ds4a/project.md or the tone, then run /ds4a resolve.",
+        f"{MARKER} — do not edit by hand. Edit .ds4a/project.md or the tone, then run /ds4a init.",
         f"Layers: {layers}",
         f"Project type: {ptype or 'all components'}",
     ]
