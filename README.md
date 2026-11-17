@@ -4,13 +4,15 @@
 
 ## What is ds4a
 
-ds4a is a **skill** — a folder of instructions, token files, and two small Python scripts that any AI coding agent can load from your project. Claude Code, Codex, Cursor, Copilot, v0, Lovable: anything that reads project files.
+ds4a is a **skill** — a folder of instructions, token files, and small Python scripts that any AI coding agent can load from your project. Claude Code, Codex, Cursor, Copilot, v0, Lovable: anything that reads project files.
 
-It does three things:
+It does five things:
 
 1. **Detects.** It looks for a design system you already have — `AGENTS.md`, `tokens.json`, shadcn's `globals.css`, Tailwind v4 `@theme`, `tailwind.config`, `design-tokens.ts` — and imports what's there. If there isn't one, it starts from a neutral baseline.
 2. **Resolves.** The core fundamentals, one *tone* (the look), and your project's own overrides collapse into a single file: `DESIGN.md`. That file is what your agent reads when it builds.
-3. **Grows.** After you build, `/ds4a diff` finds where your agent drifted from the rules and proposes fixes. You approve them; `/ds4a merge` writes them back — to the project, to the tone, or to the shared library. Project 10 starts with everything projects 1–9 taught it.
+3. **Shows.** `preview.html` renders that system — foundations, your project's actual components as *specimens*, the core contracts, and every contract's status — as one self-contained page.
+4. **Applies.** `apply` writes the resolved tokens into exactly one generated CSS file (or one Tailwind `@theme` block) and prints the import line. `--check` reports drift and hardcoded values that could become tokens.
+5. **Grows.** After you build, `/ds4a diff` finds where your agent drifted from the rules and proposes fixes. You approve them; `/ds4a merge` writes them back — to the project, to the tone, or to the shared library. Project 10 starts with everything projects 1–9 taught it.
 
 Short version: **it makes AI-generated UI consistent instead of random, and it remembers what you taught it.**
 
@@ -50,9 +52,11 @@ Resolution is deterministic and self-checking: `scripts/resolve.py` merges the l
 
 ```
 new project → /ds4a init → build with AI → /ds4a diff → approve → /ds4a merge → library grows
+                                                    ↘ /ds4a specimens → preview
+                                                    ↘ /ds4a apply → tokens in code
 ```
 
-`/ds4a init` detects (or invents) a system, writes the overlay, resolves `DESIGN.md`, and opens the preview. You build. Then `/ds4a diff` reads your code against the rules in three passes — violations, repeated-but-uncodified patterns, and gaps where the agent had to guess. You approve the good ones, and `/ds4a merge` files each one to the right layer.
+`/ds4a init` detects (or invents) a system, writes the overlay, resolves `DESIGN.md`, and opens the preview. You build. Then `/ds4a diff` reads your code against the rules in four passes — violations, repeated-but-uncodified patterns, gaps where the agent had to guess, and components the preview doesn't show yet. You approve the good ones, and `/ds4a merge` files each one to the right layer.
 
 Nothing happens automatically. Diff and merge only run when you ask.
 
@@ -66,9 +70,12 @@ Invoke as `/ds4a <subcommand>`.
 | `/ds4a detect` | Dry run: what would be imported. Writes nothing |
 | `/ds4a tone` / `tone <name>` / `tone new <name>` | List, switch, or fork a tone |
 | `/ds4a resolve` | Regenerate `DESIGN.md` from the layers |
+| `/ds4a blend [--adopt]` | Migrate a hand-written `DESIGN.md` into the overlay, verified against code; adopt in place |
+| `/ds4a specimens [scan\|add\|remove\|list]` | Capture real project components into the preview |
+| `/ds4a apply [--check]` | Write resolved tokens to one CSS file (or Tailwind `@theme`); check drift |
 | `/ds4a preview` | Build and open the design-system page `.ds4a/preview.html` |
-| `/ds4a diff` | Diff generated code against DESIGN.md (violations, patterns, gaps, preview coverage), approve/reject each suggestion |
-| `/ds4a merge` | Merge approved rules to the project, a tone, or core |
+| `/ds4a diff` | Diff generated code against DESIGN.md (violations, patterns, gaps, specimens), approve/reject each suggestion |
+| `/ds4a merge` | Merge approved rules to the project, a tone, core, or the preview |
 | `/ds4a status` | Active tone, type, versions, pending review |
 
 ## Preview
@@ -76,23 +83,55 @@ Invoke as `/ds4a <subcommand>`.
 `/ds4a preview` (or `python3 scripts/build-preview.py --project .`) writes one self-contained page, `.ds4a/preview.html`, generated from the resolved tokens. It opens offline; only Google Fonts load when online.
 
 - **Foundations:** principles from the tone's Overview, color with WCAG contrast badges, type specimens and the full scale, spacing, radius, shadows, motion.
-- **Components:** all 13 core contracts with live states (hover, focus, error, disabled, open, selected). Filtered by project type, with "Show all".
+- **Project specimens:** the components this project *actually* has, captured as static markup in `.ds4a/specimens/` and rendered above the core contracts. Each carries its source file and capture date; `diff` flags drift. Switching tone re-skins them because they use the same tokens.
+- **Components:** all 13 core contracts with live states (hover, focus, error, disabled, open, selected). Filtered by project type, with "Show all"; contracts the overlay excludes are hidden.
+- **Contracts:** a status matrix — enforced, specimen, excluded, grown, or not used by this project type — so it is obvious what the agent is told to build and what the project replaced.
+- **Copy-on-click:** every color, type shorthand, spacing step, radius, shadow and motion value has a ⧉ button.
 - **Tone switcher:** every tone in `library/tones/` is built into the page. Compare "this project" (tone + overlay) against the raw tones; components re-shape, not just recolor.
-- **Navigation:** grouped sidebar, breadcrumb, search (`/`), and a gliding nav pill on desktop and mobile.
+- **Navigation:** grouped sidebar (Foundations, Components, Reference), breadcrumb, search (`/`), and a gliding nav pill on desktop and mobile.
 - **Motion from tokens:** every transition uses the tone's `duration.*` and `ease.*`; `prefers-reduced-motion` is respected.
 
-Rebuild after changing the tone or `.ds4a/project.md` — the page does not watch files. Nothing is written outside `.ds4a/`.
+Rebuild after changing the tone, `.ds4a/project.md`, or a specimen — the page does not watch files. Nothing is written outside `.ds4a/`.
+
+## Specimens
+
+The core contracts show what the library promises. **Specimens** show what your project actually built:
+
+```bash
+/ds4a specimens scan
+/ds4a specimens add pill --from src/components/Pill.tsx
+```
+
+`add` extracts the markup (React/Vue/Svelte/HTML), writes `.ds4a/specimens/pill.html` with a provenance header (`source`, `captured`, optional `contract:`), registers it in the overlay, and rebuilds the preview. A specimen is a static copy — never a dev-server iframe — so the page stays one file with no build integration. It reads the same custom properties as the rest of the page, so switching tone re-skins it.
+
+`scan` finds component files with no specimen and no matching contract; `/ds4a diff` proposes the same list as its fourth finding class. Approving one runs the `add` command above.
+
+## Apply
+
+Stop hand-copying values out of `DESIGN.md`:
+
+```bash
+/ds4a apply            # writes src/styles/ds4a-tokens.css
+/ds4a apply --tailwind # writes one @theme block to src/styles/ds4a-theme.css
+/ds4a apply --check    # drift + hardcoded values that match a token
+```
+
+It writes exactly one new file, never edits components or `tailwind.config`, and prints the one `@import` line to add. The file carries a generated marker; `apply` refuses to overwrite a file without it. `--check` writes nothing and lists hardcoded hex/px in source that exactly match a token as migration candidates.
 
 ## Four situations you'll hit
 
 1. **You use it at scale.** The library lives in this repo (`library/`). Every project resolves from the same copy, and merges write back to it — so project 10 starts from everything projects 1–9 taught it.
 2. **You want several looks, one set of fundamentals.** Switch with `/ds4a tone <name>`. Change one radius step and every component follows (`rounded.md` → buttons, cards…). The contracts never change.
-3. **Your project already has a system.** Detection reads AGENTS.md, `tokens.*`, shadcn `globals.css` (oklch → hex), Tailwind v4 `@theme`, `design-tokens.ts`, `tailwind.config`. Found tokens go in the overlay and win; gaps fall back to `neutral`. Nothing you own is overwritten.
+3. **Your project already has a system.** Detection reads AGENTS.md, `tokens.*`, shadcn `globals.css` (oklch → hex), Tailwind v4 `@theme`, `design-tokens.ts`, `tailwind.config`. Found tokens go in the overlay and win; gaps fall back to `neutral`. Nothing you own is overwritten. If a hand-written `DESIGN.md` exists, init stops and asks first — keep both, adopt the generated doc, or abort — and doc-vs-code drift is reported, not silently resolved. `/ds4a blend` migrates that doc: tokens and unique rules move into the overlay, conflicts print with both values and sources, and `--adopt` backs up the old file and regenerates `DESIGN.md` in place. Where the project contradicts the library outright, the overlay can drop contracts (`exclude_components:`) or take over a whole section (`<!-- replace -->`) instead of arguing in prose.
 4. **Your project has nothing.** You get the `neutral` tone: system fonts, grays, one action color, small radii, a 4px grid, sitting on top of the 13 core contracts (anatomy modeled on Base UI's unstyled parts). Grow it per project in the overlay, or fork it into a tone.
 
 ## Core components
 
 13 core contracts — Button, Input, Field/Form/Fieldset, Select, RadioGroup, Card, Badge, Modal, Tabs, Table, Sidebar — benchmarked against UXPin's essential-components list, the shadcn/ui registry and Base UI. Contracts added by reviews carry `(grown)`; a grown contract used by 3+ projects (`library/usage.md`) is offered for promotion to core. See [core-components.md](references/core-components.md).
+
+## Vision
+
+[VISION.md](VISION.md) — the loop ds4a now runs: detect → preview → build → codify, with the overlay as the only hand-edited layer and `DESIGN.md` and the preview as two render targets of it. Shipped in v2.2.0.
 
 ## Install
 
@@ -101,7 +140,7 @@ cd ~/.agents/skills        # or your agent's skills directory
 git clone https://github.com/dickyudhandika/design-system-for-agents.git ds4a
 ```
 
-Requires `python3` (standard library only) for `scripts/resolve.py` and `scripts/build-preview.py`.
+Requires `python3` (standard library only) for all scripts, including `resolve.py`, `build-preview.py`, `blend.py`, `specimens.py`, and `apply.py`.
 
 Without a skill runner: `python3 scripts/resolve.py --tone neutral --stdout > DESIGN.md` and give your agent the file.
 
@@ -115,10 +154,14 @@ Without a skill runner: `python3 scripts/resolve.py --tone neutral --stdout > DE
 | `library/usage.md` | Which projects used which grown contracts |
 | `scripts/resolve.py` | Layers → `DESIGN.md`, with contrast and matrix-parity checks |
 | `scripts/build-preview.py` | Tokens → `.ds4a/preview.html` (see [Preview](#preview), [preview.md](references/preview.md)) |
+| `scripts/blend.py` | Hand-written `DESIGN.md` → overlay, verified against code; `--adopt` regenerates in place |
+| `scripts/specimens.py` | `scan` candidates; `add`/`remove` captured components and register them |
+| `scripts/apply.py` | Resolved tokens → one generated CSS file or Tailwind `@theme`; `--check` drift |
 | `scripts/oklch-to-hex.py` | shadcn oklch → hex |
-| `references/` | detection, shadcn mapping, review prompt, matrix, core benchmark, pitfalls |
+| `references/` | detection, blend, specimens, apply, review prompt, matrix, core benchmark, pitfalls |
 | `templates/project-overlay.md` | Starting overlay |
 | `templates/*.tsx/.astro`, `scripts/build-preview-html.ts` | In-framework `/design-system` references |
+| `tests/` | `python3 -m unittest discover -s tests -v` |
 
 ## Which AI agents work
 
@@ -130,7 +173,7 @@ Anything that reads project files: Claude Code, Codex, Cursor, Copilot, Hermes, 
 
 **Is it framework-specific?** No. `DESIGN.md` is framework-agnostic.
 
-**Will it overwrite my theme or my DESIGN.md?** No. Only `DESIGN.md` (if it's ds4a-generated) and `.ds4a/` are written; `resolve.py` refuses to overwrite a DESIGN.md it didn't generate.
+**Will it overwrite my theme or my DESIGN.md?** No. Only `DESIGN.md` (if it's ds4a-generated), `.ds4a/`, and the one `ds4a apply` token file are written; `resolve.py` refuses to overwrite a DESIGN.md it didn't generate, and `apply` refuses a token file without its marker. Adopting a hand-written doc is explicit (`/ds4a blend --adopt`) and keeps a backup.
 
 **Why is the preview plain HTML?** It has to open anywhere with no build step and no dependencies, and it shows the tokens in a real browser. For live framework components, use the in-framework `/design-system` references in `templates/`.
 
@@ -143,6 +186,9 @@ MIT
 ## Roadmap
 
 - [x] Multiple base libraries (tones)
+- [x] Project specimens + contracts matrix in the preview
+- [x] `apply` tokens into one generated CSS file; `--check` drift
+- [x] Blend/adopt a hand-written `DESIGN.md`
 - [ ] More tones (soft/friendly, dark/technical)
 - [ ] Dark-mode tokens per tone
 - [ ] Vision check — screenshots + vision AI for issues code can't catch

@@ -1,6 +1,6 @@
 # Design System Review — B Loop Trigger
 
-> Copy this prompt into your AI agent along with your generated code files and your current DESIGN.md. The AI will analyze the code, find patterns worth codifying, and output suggestions you can approve and merge into your library (project overlay, a tone, or core).
+> Copy this prompt into your AI agent along with your generated code files and your current DESIGN.md. The AI will analyze the code, find patterns worth codifying, and output suggestions you can approve and merge into your library (project overlay, a tone, core, or the preview).
 
 ## Your Role
 
@@ -17,9 +17,9 @@ You will be given:
 
 Read both carefully before starting analysis.
 
-## Analysis — Three Passes
+## Analysis — Four Passes
 
-Run three structured passes over the code. Do not skip passes. Do not merge passes. Each pass finds a different type of insight.
+Run four structured passes over the code. Do not skip passes. Do not merge passes. Each pass finds a different type of insight.
 
 ### Pass 1: Violation Detection
 
@@ -71,31 +71,49 @@ Common gaps to check:
 - Layout patterns for page types not mentioned (sidebar, hero, grid)
 - Error/loading/empty states not covered by existing rules
 
-### Coverage Scan: what the preview doesn't show
+### Pass 4: Specimens and coverage — what the preview doesn't show
 
-The preview (`.ds4a/preview.html`) renders only what DESIGN.md defines: the resolved
-tokens and the component contracts. Anything the code uses that DESIGN.md doesn't
-define is **invisible in the preview**. Find it.
+The preview (`.ds4a/preview.html`) renders the resolved tokens, the core contracts,
+and the project specimens in `.ds4a/specimens/`. Anything the code uses that has no
+contract **and** no specimen is invisible in the preview. Find it.
 
 1. **Components.** List every reusable component in the code (files under
    `components/**`, or any element structure repeated 2+ times). Match each against
-   the contracts in DESIGN.md `## Components`. A component with no contract is
-   uncovered. Skip pure layout wrappers and one-off page sections.
-2. **Tokens.** Collect every color, font family, font size, radius, spacing value
+   the contracts in DESIGN.md `## Components` and the specimens in
+   `.ds4a/specimens/` (each has a `title` and optional `contract:` in its header).
+   A component with neither is uncovered. Skip pure layout wrappers and one-off
+   page sections.
+2. **Specimen candidates.** Run
+   `python3 <skill>/scripts/specimens.py --project . scan` (or do the same walk).
+   Every row is a component file with no specimen and no contract. This is the
+   actionable half of coverage: the fix is one command, not a new contract.
+3. **Tokens.** Collect every color, font family, font size, radius, spacing value
    and shadow the code uses, including raw values and CSS variables that exist in
    the project's own CSS but not in the resolved frontmatter. A value with no token
    is uncovered.
-3. **Report each as a coverage finding**, even when it appears only once or twice.
+4. **Report each as a coverage finding**, even when it appears only once or twice.
    Occurrence thresholds don't apply here, because the question is "is it
    defined?", not "is it repeated?".
+5. **Stale specimens.** If a specimen's `source` mtime is newer than `captured`,
+   flag it as a low-severity drift finding: recapture with
+   `specimens.py add <slug> --from <source> --force`.
 
 For each finding, give the proposed contract or token, so merging it makes the item
-appear in the preview next time. If the code already has a token under another
-name, suggest mapping to it instead of adding a duplicate.
+appear in the preview next time. For a specimen candidate, give the exact
+one-command fix:
+
+```bash
+python3 <skill>/scripts/specimens.py --project . add <slug> --from <path>
+```
+
+If the component is the project's version of a core contract, add
+`--contract <Name>` so the Contracts matrix reports it as `Specimen`. If the code
+already has a token under another name, suggest mapping to it instead of adding a
+duplicate.
 
 ## Concrete Scan Checklist
 
-While running the three passes, check these specific things. This is not optional — scan every item.
+While running the four passes, check these specific things. This is not optional — scan every item.
 
 ### Tokens
 
@@ -146,9 +164,9 @@ For each suggestion, output in this exact format:
 ---
 ## Suggested Rule: [kebab-case-name]
 **Type:** token | prose-rule | guardrail | component-contract
-**Target:** project | tone:<name> | core
+**Target:** project | tone:<name> | core | preview
 **Confidence:** high (3+ occurrences) | medium (2 occurrences) | low (1 occurrence — observation only)
-**Pass:** violation | pattern | gap | coverage
+**Pass:** violation | pattern | gap | specimen | coverage
 
 **YAML:** [if token — valid YAML line for DESIGN.md frontmatter]
 **Prose:** [if prose-rule or guardrail — markdown text for DESIGN.md prose section]
@@ -298,6 +316,7 @@ Every suggestion names where it should live. Pick the narrowest target that is t
 | `project` (default) | The rule fits this project's look or content only. | `.ds4a/project.md` overlay |
 | `tone:<name>` | The rule exists because of the tone (a color rule, a radius philosophy, a font role) and would apply to any project using that tone. | `library/tones/<name>.md` |
 | `core` | The rule is a fundamental: anatomy, states, accessibility, behavior. It must contain **no tone values** — reference tokens (`color.primary`, `spacing.xl`) or `{{placeholders}}`, never raw hex/px a tone could change. | `library/core.md` |
+| `preview` | The finding is "this project has a component the catalog doesn't show", with no new rule needed. The fix is a specimen, not a contract. | `.ds4a/specimens/<name>.html` + `specimens:` in the overlay |
 
 If a suggestion hard-codes a tone value (e.g. "cards use 24px padding") it is a `tone` or `project` rule, not `core`. When unsure, choose `project`.
 
@@ -366,7 +385,9 @@ After all suggestions, output this summary block:
 **Violations found:** [N]
 **Patterns detected:** [N] ([M high confidence, K medium, L low])
 **Gaps found:** [N]
-**Not in preview:** [N components, M tokens]
+**Specimens missing:** [N components]
+**Stale specimens:** [N]
+**Not in preview:** [M tokens]
 
 **Suggested merges:**
 - [N] tokens → add to YAML frontmatter
@@ -377,13 +398,13 @@ After all suggestions, output this summary block:
 **Next steps:**
 1. Review each suggestion above
 2. Approve or reject each one
-3. Approved rules merge to their target: the project overlay, a tone pack, or core
+3. Approved rules merge to their target: the project overlay, a tone pack, core, or a preview specimen
 4. Next project generates from the richer library
 ---
 ```
 
 ## Execution
 
-Begin analysis now. Read the generated code files and the DESIGN.md provided. Run all three passes and the coverage scan. Output violations first, then patterns (high → medium → low confidence), then gaps, then coverage findings. End with the Review Summary.
+Begin analysis now. Read the generated code files, the DESIGN.md, and `.ds4a/specimens/`. Run all four passes, including the specimen scan. Output violations first, then patterns (high → medium → low confidence), then gaps, then specimen/coverage findings. End with the Review Summary.
 
 Do not ask questions. Do not request clarification. Analyze what you have and output what you find. If something is ambiguous, note it as a low-confidence observation.

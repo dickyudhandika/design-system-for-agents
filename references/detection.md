@@ -100,3 +100,53 @@ Found: <sources>. Imported N tokens (colors a, type b, radius c, spacing d).
 Gaps filled from neutral: <groups>.
 Contrast: <pass | warnings from resolve.py>.
 ```
+
+## 8. Existing `DESIGN.md` — drift check and the adopt decision
+
+If the project has a hand-written `DESIGN.md`, it is stale the moment code moves on.
+Before writing anything, diff the doc against the extracted tokens and report
+conflicts **with both values and their sources** — never silently pick one:
+
+- frontmatter `colors.*`, `typography.*`, `rounded.*`, `spacing.*` vs the values
+  found in CSS/Tailwind/DTCG (code usually wins; prose is what went stale)
+- any value quoted in prose (sizes, breakpoints, radii) vs the token files
+- doc-only components/sections vs what the matrix admits for this type
+
+Token files win for the overlay itself, but the conflict goes in the report and
+the user decides. Then ask, before writing any file:
+
+1. **keep both** — overlay + generated doc beside `DESIGN.md` (both docs exist;
+   the user maintains the boundary). Default if the user says nothing.
+   `blend.py --write-overlay` writes `DESIGN.generated.md` beside the old doc.
+2. **adopt** — the generated doc becomes the visual source of truth; record the
+   drift fixes in the overlay, and mark `DESIGN.md` as superseded (header note,
+   or delete if the user asks). `blend.py --adopt` is the one command: it backs
+   up the old doc to `.ds4a/DESIGN.md.pre-ds4a.md`, writes the overlay, resolves,
+   and replaces `DESIGN.md`. `resolve.py --adopt` is the direct flag when the
+   overlay is already correct.
+3. **abort** — write nothing.
+
+Never present the generated doc as "the" design system while `DESIGN.md` also
+claims that role. Two unlabelled sources of truth is the failure mode this
+check exists to prevent.
+
+`blend.py` automates the mechanical part of this: it extracts doc tokens and
+unique bullets, compares them with code token files, prints every conflict with
+both values and sources, and writes the overlay. It never chooses silently:
+`--prefer code` (default) or `--prefer doc` decides, and the report says so.
+
+Overlay frontmatter is metadata plus tokens. `tone`, `type`,
+`exclude_components`, `specimens`, `source-of-truth`, `adopted` and `blended`
+are consumed by ds4a and never appear in `DESIGN.md`; only the token groups
+(`colors`, `typography`, `rounded`, `spacing`, `components`) are merged.
+
+Where the project contradicts the library outright (no tabs, no shadows, chips
+instead of tabs), encode it structurally, not as advice:
+
+- `exclude_components: [Tabs, Card]` in the overlay frontmatter drops those
+  contracts from the output entirely.
+- A `<!-- replace -->` first line in an overlay `## Section` drops core+tone
+  content for that section instead of appending below it.
+
+Prose like "we don't use shadows" appended below a core section that mandates
+`shadow.subtle` is not enough — the reader gets two contradictory rules.

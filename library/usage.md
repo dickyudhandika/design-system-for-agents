@@ -11,3 +11,4 @@ promotion to core by `/ds4a diff`.
 | 2026-10-29 | ds4a-test/ds4a-test-2 | apple-gallery v2 | landing-page | none |
 | 2026-10-30 | ds4a-test/ds4a-test-3 | neutral | auth-flow | none |
 | 2026-11-04 | image4designer/frontend (Lumyra) | neutral + overlay | e-commerce | none |
+| 2026-11-17 | ddkydesign-web-portfolio (ddkydesign) | neutral + overlay | content-site | none |

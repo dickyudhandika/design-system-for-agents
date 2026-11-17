@@ -6,10 +6,19 @@ Layers (later wins on tokens):
   library/tones/<tone>.md    token values + tone-only prose
   <project>/.ds4a/project.md overlay: `tone:`, `type:`, token overrides, project notes
 
+Overlay extras beyond tokens:
+  exclude_components: [Tabs, Card]   frontmatter list — drop those contracts entirely
+  specimens: [pill, card]            preview metadata — never merged into tokens
+  source-of-truth: path              typed-registry note — never merged
+  <!-- replace --> as the first line of an overlay `## Section` — the overlay
+                                     section replaces core+tone for that section
+  (otherwise overlay sections are appended to the core section)
+
 Usage:
   python3 scripts/resolve.py --project . [--tone warm-sharp] [--type dashboard]
   python3 scripts/resolve.py --list-tones
   python3 scripts/resolve.py --project . --check        # report only, write nothing
+  python3 scripts/resolve.py --project . --adopt        # confirmed adopt: overwrite a hand-written DESIGN.md
   python3 scripts/resolve.py --tone neutral --stdout    # no project needed
 
 Standard library only.
@@ -61,6 +70,17 @@ _uid = [0]
 def _next_uid():
     _uid[0] += 1
     return _uid[0]
+
+
+def leaf_list(fm, key):
+    """Inline list from a Leaf: `key: [a, b]` or `key: a`. Comments already split off by the parser."""
+    v = fm.get(key)
+    if not isinstance(v, Leaf):
+        return []
+    raw = unquote(v.value).strip()
+    if raw.startswith("[") and raw.endswith("]"):
+        raw = raw[1:-1]
+    return [p.strip().strip("'\"") for p in raw.split(",") if p.strip()]
 
 
 def split_comment(rest):
@@ -277,13 +297,27 @@ def load_matrix(path):
     return comp, layout, types
 
 
-def filter_components(body, ptype, comp):
+def split_overlay_section(v):
+    """Split an overlay section body into (replace?, body). A leading
+    `<!-- replace -->` marker means the overlay owns the section outright:
+    core and tone content for it is dropped instead of appended to."""
+    m = re.match(r"^\s*<!--\s*replace\s*-->\s*", v, re.S)
+    if m:
+        return True, re.sub(r"<!--.*?-->", "", v[m.end():], flags=re.S).strip()
+    return False, re.sub(r"<!--.*?-->", "", v, flags=re.S).strip()
+
+
+def filter_components(body, ptype, comp, exclude=frozenset()):
     parts = re.split(r"(?m)^(?=### )", body)
     keep = []
     for part in parts:
         m = re.match(r"### (.+?)(?:\s*\(grown\))?\s*$", part.split("\n", 1)[0])
-        if m and norm(m.group(1)) in comp and not comp[norm(m.group(1))].get(ptype, True):
-            continue
+        if m:
+            n = norm(m.group(1))
+            if n in exclude:
+                continue
+            if ptype and n in comp and not comp[n].get(ptype, True):
+                continue
         keep.append(part)
     return "".join(keep)
 
@@ -379,15 +413,24 @@ def resolve(lib, tone, overlay_path, ptype):
         core_fm.pop(k, None)
     merge(tree, core_fm)
     merge(tree, tone_fm)
-    ov_sections = {}
+    ov_sections, ov_replace, ov_exclude = {}, set(), []
     if overlay_path and Path(overlay_path).exists():
         ov_fm, ov_body, _ = read_layer(overlay_path)
-        for k in ("tone", "type"):
-            ov_fm.pop(k, None)
-        merge(tree, strip_comments(ov_fm))
-        ov_sections = {k: v for k, v in
-                       ((k, re.sub(r"<!--.*?-->", "", v, flags=re.S).strip()) for k, v in split_sections(ov_body).items())
-                       if v}
+        for k in ("tone", "type", "exclude_components", "specimens",
+                  "source-of-truth", "adopted", "blended"):
+            v = ov_fm.pop(k, None)
+            if k == "exclude_components":
+                ov_exclude = leaf_list({k: v}, k) if isinstance(v, Leaf) else []
+        # Only token groups are layer content; everything else is project metadata.
+        merge(tree, strip_comments({k: v for k, v in ov_fm.items()
+                                    if k in ("colors", "typography", "rounded", "spacing", "components")}))
+        for k, v in split_sections(ov_body).items():
+            replace, body = split_overlay_section(v)
+            if body:
+                ov_sections[k] = body
+                if replace:
+                    ov_replace.add(k)
+    ov_exclude_n = {norm(x) for x in ov_exclude}
     tree = resolve_tree(tree)
 
     missing = set()
@@ -419,6 +462,9 @@ def resolve(lib, tone, overlay_path, ptype):
     sections = []
     for name in SECTION_ORDER:
         c, t, o = core_s.get(name, ""), tone_s.get(name, ""), ov_s.get(name, "")
+        if name in ov_replace:
+            sections.append((name, o))
+            continue
         if name == "Overview" and o:
             t, o = o, ""
         if o and not o.lstrip().startswith("### "):
@@ -442,8 +488,8 @@ def resolve(lib, tone, overlay_path, ptype):
     def render(filter_type):
         out = []
         for name, body in sections:
-            if name == "Components" and filter_type:
-                body = filter_components(body, filter_type, comp)
+            if name == "Components":
+                body = filter_components(body, filter_type, comp, ov_exclude_n)
             if name == "Layout":
                 body = filter_layout(body, filter_type, layout)
             out.append(f"## {name}\n\n{body.strip(chr(10))}\n")
@@ -462,12 +508,19 @@ def resolve(lib, tone, overlay_path, ptype):
         f"{MARKER} — do not edit by hand. Edit .ds4a/project.md or the tone, then run /ds4a resolve.",
         f"Layers: {layers}",
         f"Project type: {ptype or 'all components'}",
+    ]
+    if ov_exclude:
+        header.append(f"Components excluded by overlay: {', '.join(ov_exclude)}")
+    if ov_replace:
+        header.append(f"Sections replaced by overlay: {', '.join(sorted(ov_replace))}")
+    header += [
         f"Output: {total} lines ({round(100 * total / full_lines)}% of the full resolved library)",
         "-->",
     ]
     doc = "\n".join(fm_lines + [""] + header + [""]) + "\n" + body_text.rstrip("\n") + "\n"
     return doc, {"layers": layers, "lines": len(doc.split("\n")), "full": full_lines,
-                 "contrast": contrast_report(tree), "parity": parity, "tree": tree, "tone": tone, "type": ptype}
+                 "contrast": contrast_report(tree), "parity": parity, "tree": tree, "tone": tone, "type": ptype,
+                 "excluded": ov_exclude, "replaced": sorted(ov_replace)}
 
 
 def main():
@@ -481,8 +534,11 @@ def main():
     ap.add_argument("--check", action="store_true", help="report only; write nothing")
     ap.add_argument("--no-overlay", action="store_true", help="ignore .ds4a/project.md")
     ap.add_argument("--force", action="store_true", help="overwrite an existing DESIGN.md not generated by ds4a")
+    ap.add_argument("--adopt", action="store_true", help="confirmed adopt: overwrite a hand-written DESIGN.md (implies --force)")
     ap.add_argument("--list-tones", action="store_true")
     args = ap.parse_args()
+    if args.adopt:
+        args.force = True
 
     lib = Path(args.library)
     try:
@@ -519,6 +575,10 @@ def main():
           file=sys.stderr)
     for w in info["contrast"]:
         print(f"WARNING contrast: {w}", file=sys.stderr)
+    if info["excluded"]:
+        print(f"excluded by overlay: {', '.join(info['excluded'])}", file=sys.stderr)
+    if info["replaced"]:
+        print(f"sections replaced by overlay: {', '.join(info['replaced'])}", file=sys.stderr)
     for n in info["parity"]:
         print(f"WARNING matrix parity: '{n}' is in component-matrix.md but has no contract in the library", file=sys.stderr)
     return 0

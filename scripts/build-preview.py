@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """ds4a preview: render the resolved design system as one self-contained HTML page.
 
-Reads the same layers as resolve.py (core + tone + .ds4a/project.md) and writes
+Reads the same layers as resolve.py (core + tone + .ds4a/project.md), plus the
+project's captured specimens in .ds4a/specimens/, and writes
 <project>/.ds4a/preview.html: hero, principles, color with live contrast, type
-specimens and scale, spacing, radius, elevation and motion, all 13 core contracts
-with their states, and the raw resolved tokens. Sticky nav, search, and a tone
+specimens and scale, spacing, radius, elevation and motion, the project's
+specimens, all 13 core contracts with their states, a contracts status matrix,
+and the raw resolved tokens with copy-on-click. Sticky nav, search, and a tone
 switcher: every library tone is resolved at build time and emitted as CSS
 variables under [data-tone], so the whole page re-skins. Components are styled
 only through --c-<component>-<key> variables. Nothing is written outside .ds4a/.
@@ -21,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import resolve as R  # noqa: E402
+import specimens as SPEC  # noqa: E402
 
 SYSTEM_FONTS = {"system-ui", "-apple-system", "blinkmacsystemfont", "sans-serif", "serif", "monospace",
                 "segoe ui", "roboto", "helvetica", "helvetica neue", "arial", "georgia", "ui-sans-serif",
@@ -38,6 +41,10 @@ TYPE_SAMPLES = {"title": "Design is how it works", "label": "Save changes",
 TYPE_GROUPS = {"title": "Titles", "label": "Labels", "paragraph": "Paragraphs"}
 
 esc = html.escape
+
+
+def copy_btn(value, label="Copy value"):
+    return f'<button class="cp" type="button" data-copy="{esc(value)}" aria-label="{esc(label)}" title="Copy">⧉</button>'
 
 
 def md_inline(s):
@@ -205,7 +212,8 @@ def swatch(colors, k, v, role):
             badge = (f'<span class="cr{" bad" if r < need else ""}">{r:.1f}:1 · {lvl}</span>'
                      f'<span class="vs">vs {other}, needs {need:g}:1</span>')
     return (f'<div class="sw" data-s="color"><div class="chip" style="background:{esc(v)}"></div>'
-            f'<div class="swb"><b>{esc(k)}</b><code>{esc(v)}</code>{f"<p>{esc(role)}</p>" if role else ""}{badge}</div></div>')
+            f'<div class="swb"><b>{esc(k)}</b><div class="valrow"><code>{esc(v)}</code>{copy_btn(v, f"Copy {k}")}</div>'
+            f'{f"<p>{esc(role)}</p>" if role else ""}{badge}</div></div>')
 
 
 def colors(e):
@@ -246,23 +254,26 @@ def typography(e):
             cat = c
             out.append(f'<h3 class="gh">{TYPE_GROUPS.get(c, c)}</h3>')
         g = spec.get
+        shorthand = f'{g("fontWeight", "400")} {g("fontSize", "16px")}/{g("lineHeight", "normal")} {g("fontFamily", "system-ui")}'
         out.append(f'<div class="trow" data-s="type"><div class="tmeta"><code>{esc(n)}</code>'
                    f'<span>{esc(g("fontSize", ""))} · {esc(g("fontWeight", ""))} · {esc(g("lineHeight", ""))} · '
-                   f'{esc(g("letterSpacing", ""))}</span></div>'
+                   f'{esc(g("letterSpacing", ""))}</span>{copy_btn(shorthand, f"Copy {n} font shorthand")}</div>'
                    f'<div class="tsample t-{esc(n)}">{TYPE_SAMPLES.get(c, TYPE_SAMPLES["paragraph"])}</div></div>')
     return "".join(out)
 
 
 def spacing(e):
     return "".join(f'<div class="srow" data-s="space"><code>{esc(k)}</code><span>{esc(v)}</span>'
-                   f'<div><div class="bar" style="width:{esc(v)}"></div></div></div>'
+                   f'<div><div class="bar" style="width:{esc(v)}"></div></div>'
+                   f'{copy_btn(v, f"Copy spacing {k}")}</div>'
                    for k, v, _ in leaves(e["tree"].get("spacing")))
 
 
 def radius(e):
     return '<div class="rgrid">' + "".join(
         f'<div class="rad" data-s="radius rounded" style="border-radius:{esc(v)}">'
-        f'<code>{esc(k)}</code><span>{esc(v)}</span></div>' for k, v, _ in leaves(e["tree"].get("rounded"))) + "</div>"
+        f'<code>{esc(k)}</code><span>{esc(v)}</span>{copy_btn(v, f"Copy radius {k}")}</div>'
+        for k, v, _ in leaves(e["tree"].get("rounded"))) + "</div>"
 
 
 def elevation(e):
@@ -270,7 +281,8 @@ def elevation(e):
     for n in ("subtle", "elevated"):
         sh.setdefault(n, ("none", "Not defined by this tone."))
     tiles = "".join(f'<div class="sh" data-s="shadow" style="box-shadow:{esc(v)}"><b>{esc(n)}</b>'
-                    f'<code>{esc(v)}</code><span>{esc(u)}</span></div>' for n, (v, u) in sh.items())
+                    f'<div class="valrow"><code>{esc(v)}</code>{copy_btn(v, f"Copy shadow {n}")}</div>'
+                    f'<span>{esc(u)}</span></div>' for n, (v, u) in sh.items())
     mo = e["motion"]
     ease = mo.get("ease.out", ("ease-out",))[0]
     smooth = mo.get("duration.smooth", ("250ms",))[0]
@@ -278,7 +290,8 @@ def elevation(e):
     for n, (v, u) in mo.items():
         d, ez = (v, ease) if n.startswith("duration") else (smooth, v)
         rows.append(f'<div class="mrow" data-s="motion" style="--d:{esc(d)};--e:{esc(ez)}">'
-                    f'<div><code>{esc(n)}</code><span>{esc(v)}</span><p>{esc(u)}</p></div><div class="track"><i></i></div></div>')
+                    f'<div><code>{esc(n)}</code><span>{esc(v)}</span>{copy_btn(v, f"Copy {n}")}<p>{esc(u)}</p></div>'
+                    f'<div class="track"><i></i></div></div>')
     motion = (f'<h3 class="gh">Motion <span class="hint">hover a row to play</span></h3><div class="mlist">{"".join(rows)}</div>'
               if rows else "")
     return f'<h3 class="gh">Shadows</h3><div class="egrid">{tiles}</div>{motion}'
@@ -296,7 +309,8 @@ def tokens(e):
                 f'resolved dump.</p>')
     yaml = "\n".join(R.emit_yaml(bare(e["tree"])))
     return (f'<details class="raw"><summary>Resolved frontmatter · {e["layers"]} · {yaml.count(chr(10)) + 1} lines'
-            f'</summary><pre><code>{esc(yaml)}</code></pre></details>')
+            f'</summary><pre><code>{esc(yaml)}</code></pre></details>'
+            f'<div class="rawcopy">{copy_btn(yaml, "Copy resolved tokens")}</div>')
 
 
 # ───────────────────────── components (rendered once, styled by --c-* vars) ─────────────────────────
@@ -481,25 +495,94 @@ def is_off(name, ptype, comp_matrix):
     return bool(ptype) and not comp_matrix.get(R.norm(name), {}).get(ptype, True)
 
 
-def components(tree, ptype, comp_matrix):
-    cards, shown = [], 0
+def components(tree, ptype, comp_matrix, excluded=frozenset()):
+    cards, shown, hidden = [], 0, 0
     for name, render, wide in COMPONENTS:
         key = COMP_TOKENS.get(name, name.lower())
-        off = is_off(name, ptype, comp_matrix)
-        shown += not off
+        is_ex = R.norm(name) in excluded
+        off = is_off(name, ptype, comp_matrix) and not is_ex
+        shown += not off and not is_ex
+        hidden += is_ex
         vals = " ".join(f"{k} {v}" for k, v, _ in leaves(tree.get("components", {}).get(key)))
+        classes = (" wide" if wide else "") + (" off" if off else "") + (" excluded" if is_ex else "")
         cards.append(
-            f'<article class="cmp{" wide" if wide else ""}{" off" if off else ""}" id="c-{key}" data-title="{name}" '
+            f'<article class="cmp{classes}" id="c-{key}" data-title="{name}" '
             f'data-s="{esc(name)} {esc(vals)}"><header><h3 class="t-title-h6">{name}</h3></header>'
             f'<div class="demo">{render()}</div></article>')
-    total = len(COMPONENTS)
+    total = len(COMPONENTS) - hidden
+    note = f" {hidden} excluded by the overlay." if hidden else ""
     if ptype and shown < total:
         bar = (f'<div class="cbar"><p>Showing {shown} of {total} contracts for <strong>{esc(ptype)}</strong> '
-               f'(from <code>component-matrix.md</code>).</p><button class="chipbtn" id="all" type="button" '
+               f'(from <code>component-matrix.md</code>).{note}</p><button class="chipbtn" id="all" type="button" '
                f'data-on="Only {esc(ptype)}" data-off="Show all {total}">Show all {total}</button></div>')
     else:
-        bar = f'<div class="cbar"><p>All {total} core contracts, styled only from <code>--c-*</code> variables.</p></div>'
+        bar = (f'<div class="cbar"><p>{total} core contracts, styled only from <code>--c-*</code> variables.{note}</p></div>')
     return bar + f'<div class="cmps">{"".join(cards)}</div>'
+
+
+def specimens_section(specimens):
+    if not specimens:
+        return ('<div class="empty"><p><b>No project specimens yet.</b></p>'
+                '<p>Capture the components this project really has — beyond the core contracts:</p>'
+                '<pre><code>python3 scripts/specimens.py --project . scan\n'
+                'python3 scripts/specimens.py --project . add pill --from src/components/Pill.tsx</code></pre>'
+                '<p>A specimen is a static copy, rendered here with the same tokens. '
+                '<code>/ds4a diff</code> also proposes candidates.</p></div>')
+    cards = []
+    for s in specimens:
+        drift = ""
+        if s["status"] == "changed":
+            drift = '<span class="drift">source changed since capture</span>'
+        elif s["status"] == "missing":
+            drift = '<span class="drift">source file missing</span>'
+        contract = f'<span class="sbadge">{esc(s["contract"])}</span>' if s["contract"] else ""
+        src = (f'<code>{esc(s["source"])}</code>' if s["source"] else "captured from the project")
+        captured = f' · captured {esc(s["captured"])}' if s["captured"] else ""
+        cards.append(
+            f'<article class="spec" id="spec-{esc(s["slug"])}" data-title="{esc(s["title"])}" '
+            f'data-s="specimen {esc(s["title"])} {esc(s["contract"])} {esc(s["source"])}">'
+            f'<header><div class="spech"><h3 class="t-title-h6">{esc(s["title"])}</h3>{contract}</div>'
+            f'<p class="prov">{src}{captured}{drift}</p></header>'
+            f'<div class="specbody">{s["html"]}</div></article>')
+    return (f'<div class="cbar"><p>{len(specimens)} project specimen{"s" if len(specimens) != 1 else ""}, '
+            f'rendered from captured markup with the same tokens. Edit the copy in <code>.ds4a/specimens/</code>, '
+            f'then rebuild.</p></div><div class="specs">{"".join(cards)}</div>')
+
+
+def contracts_section(proj, ptype, comp_matrix, excluded, specimens):
+    comp_body = R.split_sections(proj["doc"]).get("Components", "")
+    doc_names = [re.sub(r"\s*\(grown\)\s*$", "", h) for h in re.findall(r"(?m)^### (.+?)\s*$", comp_body)]
+    grown = {R.norm(h) for h in re.findall(r"(?m)^### (.+?)\s*$", comp_body) if "(grown)" in h}
+    names = [n for n, *_ in COMPONENTS]
+    for n in doc_names:
+        if R.norm(n) not in {R.norm(x) for x in names}:
+            names.append(n)
+    rows = []
+    for name in names:
+        n = R.norm(name)
+        sp = next((s for s in specimens if s["contract"] and R.norm(s["contract"]) == n), None)
+        if sp and n in excluded:
+            status, detail = "specimen", "Project version; core contract excluded by the overlay."
+        elif sp:
+            status, detail = "specimen", "Project specimen replaces the core rendering in the catalog."
+        elif n in excluded:
+            status, detail = "excluded", "Dropped by <code>exclude_components</code>."
+        elif ptype and comp_matrix.get(n, {}).get(ptype) is False:
+            status, detail = "off", "Not used by this project type (matrix)."
+        elif n in grown:
+            status, detail = "grown", "Grown contract, promoted through review."
+        else:
+            status, detail = "on", "Included from core."
+        label = {"on": "Enforced", "off": "Not for type", "excluded": "Excluded",
+                 "specimen": "Specimen", "grown": "Grown"}[status]
+        sp_cell = f"<code>{esc(sp['title'])}</code>" if sp else "—"
+        rows.append(f'<tr data-s="contract {esc(name)} {status}"><td><code>{esc(name)}</code></td>'
+                    f'<td><span class="st st-{status}">{label}</span></td>'
+                    f'<td>{sp_cell}</td><td>{detail}</td></tr>')
+    return (f'<div class="cbar"><p>{len(rows)} contracts: what the agent is told to build, what the project replaced, '
+            f'and what it explicitly dropped.</p></div>'
+            f'<div class="scroll"><table class="tbl contract-tbl"><thead><tr><th>Contract</th><th>Status</th>'
+            f'<th>Specimen</th><th>Detail</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
 
 
 # ───────────────────────── page ─────────────────────────
@@ -532,6 +615,7 @@ TEMPLATE = """<!DOCTYPE html>
 <main id="main">
 {{sections}}
 <p class="nomatch" role="status"></p>
+<div class="toast" role="status" aria-live="polite"></div>
 <footer class="pfoot">Generated from tokens by ds4a. Edit <code>.ds4a/project.md</code> or the tone, then rebuild.</footer>
 </main></div></div>
 <script>
@@ -633,7 +717,7 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .tmeta span{@t(paragraph-xs);color:var(--color-muted-foreground)}
 .tsample{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* spacing, radius, elevation */
-.srow{display:grid;grid-template-columns:56px 64px minmax(0,1fr);gap:var(--space-lg);align-items:center;padding:var(--space-xs) 0}
+.srow{display:grid;grid-template-columns:56px 64px minmax(0,1fr) auto;gap:var(--space-lg);align-items:center;padding:var(--space-xs) 0}
 .srow code{color:var(--color-foreground);font-size:13px}.srow span{@t(paragraph-xs);color:var(--color-muted-foreground)}
 .bar{height:16px;max-width:100%;background:var(--color-primary);border-radius:var(--radius-xs)}
 .rgrid{display:flex;flex-wrap:wrap;gap:var(--space-lg)}
@@ -650,6 +734,7 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .raw{border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden}
 .raw summary{cursor:pointer;padding:var(--space-lg) var(--space-xl);@t(label-sm)}
 .raw pre{margin:0;padding:var(--space-xl);background:var(--color-muted);overflow:auto;max-height:640px;line-height:1.6}
+.rawcopy{margin-top:var(--space-md)}
 /* component cards */
 .cbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);margin-bottom:var(--space-xl);color:var(--color-muted-foreground);@t(paragraph-sm)}
 .chipbtn{@t(label-xs);padding:var(--space-xs) var(--space-md);border:1px solid var(--color-border);border-radius:var(--radius-full);background:var(--color-background);color:var(--color-foreground);cursor:pointer}
@@ -658,8 +743,38 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .cmp{border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-xl);min-width:0}
 .cmp.wide{grid-column:1/-1}
 .cmp.off{display:none}:root.all .cmp.off{display:block}
+.cmp.excluded{display:none!important}
 .cmp>header{margin-bottom:var(--space-xl)}
 .demo{display:flex;flex-direction:column;gap:var(--space-lg)}
+/* project specimens */
+.specs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:var(--space-xl);align-items:start}
+.spec{border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-xl);min-width:0}
+.spec>header{margin-bottom:var(--space-lg)}
+.spech{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-sm)}
+.sbadge{@t(label-xs);padding:2px var(--space-sm);border:1px solid var(--color-border);border-radius:var(--radius-full);color:var(--color-muted-foreground)}
+.prov{margin-top:var(--space-xs);@t(paragraph-xs);color:var(--color-muted-foreground);overflow-wrap:anywhere}
+.prov code{font-size:11px}
+.drift{display:inline-block;margin-left:var(--space-sm);padding:1px var(--space-sm);border-radius:var(--radius-full);background:var(--color-destructive);color:var(--color-primary-foreground);@t(label-xs)}
+.specbody{display:flex;flex-direction:column;gap:var(--space-md);min-width:0}
+.empty{border:1px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-2xl);color:var(--color-muted-foreground);max-width:72ch}
+.empty p+p{margin-top:var(--space-sm)}
+.empty pre{margin:var(--space-md) 0;padding:var(--space-md);background:var(--color-muted);border-radius:var(--radius-sm);overflow:auto}
+/* copy */
+.cp{margin-left:var(--space-sm);padding:0 4px;border:1px solid transparent;border-radius:var(--radius-xs);background:transparent;color:var(--color-muted-foreground);font:11px/18px ui-monospace,monospace;cursor:pointer;opacity:.6}
+.cp:hover,.cp:focus-visible{opacity:1;border-color:var(--color-border);color:var(--color-foreground)}
+.valrow{display:flex;align-items:center;gap:var(--space-xs);min-width:0}
+.valrow code{overflow-wrap:anywhere}
+.tmeta .cp{float:right}
+/* contract matrix */
+.contract-tbl td:last-child{white-space:normal;min-width:240px;color:var(--color-muted-foreground)}
+.st{display:inline-flex;align-items:center;padding:2px var(--space-sm);border-radius:var(--radius-full);@t(label-xs);white-space:nowrap}
+.st-on{background:var(--color-muted);color:var(--color-foreground)}
+.st-specimen{background:var(--color-primary);color:var(--color-primary-foreground)}
+.st-excluded{background:var(--color-destructive);color:var(--color-primary-foreground)}
+.st-grown{background:var(--color-foreground);color:var(--color-background)}
+.st-off{background:transparent;border:1px solid var(--color-border);color:var(--color-muted-foreground)}
+.toast{position:fixed;left:50%;bottom:var(--space-2xl);transform:translate(-50%,12px);z-index:50;padding:var(--space-sm) var(--space-lg);border-radius:var(--radius-full);background:var(--color-foreground);color:var(--color-background);@t(label-sm);opacity:0;pointer-events:none;transition:opacity var(--motion-fast) var(--ease-out),transform var(--motion-fast) var(--ease-out)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
 .g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:var(--space-lg);align-items:start}
 .g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:var(--space-lg);align-items:start}
 .scroll{overflow-x:auto;margin:0 calc(var(--space-xs) * -1);padding:var(--space-xs)}
@@ -904,7 +1019,7 @@ PAGE_JS = """
   const navs = $('.snav, .mnav').map(glider);
   const rest = () => navs.forEach(g => g.rest());
   addEventListener('resize', rest);
-  const targets = $('main section[id], main .cmp[id]'), topBar = document.querySelector('.top');
+  const targets = $('main section[id], main .cmp[id], main .spec[id]'), topBar = document.querySelector('.top');
   let queued = false;
   function spy() {
     queued = false;
@@ -917,8 +1032,8 @@ PAGE_JS = """
     const shown = $('main section:not([hidden])');
     if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) sec = shown[shown.length - 1];  // short last section
     sec = sec || shown[0];
-    if (!sec || sec.id !== 'components') cmp = null;
-    else if (!cmp) cmp = $('.cmp', sec).find(c => c.getClientRects().length) || null;
+    if (!sec || (sec.id !== 'components' && sec.id !== 'specimens')) cmp = null;
+    else if (!cmp) cmp = $('.cmp, .spec', sec).find(c => c.getClientRects().length) || null;
     const on = new Set([sec && sec.id, cmp && cmp.id]);
     navLinks.forEach(a => a.classList.toggle('on', on.has(a.hash.slice(1))));
     rest();
@@ -1030,6 +1145,35 @@ PAGE_JS = """
     b.setAttribute('aria-expanded', String(!mini));
     b.setAttribute('aria-label', mini ? 'Expand sidebar' : 'Collapse sidebar');
   }));
+
+  // Copy-on-click for token values (swatches, type rows, scale cards, shadows, motion).
+  const toastEl = document.querySelector('.toast');
+  let toastTimer;
+  const toast = msg => {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1600);
+  };
+  function legacyCopy(text) {
+    const t = document.createElement('textarea');
+    t.value = text; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); } finally { t.remove(); }
+    return Promise.resolve();
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+    }
+    return legacyCopy(text);
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-copy]');
+    if (!b) return;
+    copyText(b.dataset.copy).then(() => toast('Copied ' + b.dataset.copy), () => toast('Copy failed'));
+  });
 })();
 """.strip()
 
@@ -1039,11 +1183,13 @@ SECTIONS = [("overview", "Overview", ""), ("principles", "Principles", "What thi
             ("spacing", "Spacing", "The spacing scale. Pick a step; never invent in-between values."),
             ("radius", "Radius", "The radius scale as rendered corners."),
             ("elevation", "Elevation", "Shadow and motion tokens from the tone's prose tables."),
-            ("components", "Components", "The core contracts with their states. Shape comes from --c-* tokens, so switching tone changes it."),
-            ("tokens", "Tokens", "The resolved frontmatter this page was built from.")]
+            ("specimens", "Project specimens", "The components this project actually has, captured as static markup and rendered with the same tokens."),
+            ("components", "Core contracts", "The library's contracts with their states. Shape comes from --c-* tokens, so switching tone changes it."),
+            ("contracts", "Contracts", "Every contract's status: enforced, replaced by a specimen, excluded by the overlay, or not used by this project type."),
+            ("tokens", "Tokens", "The resolved frontmatter this page was built from. Click the ⧉ next to a value to copy it.")]
 
 
-def build(entries, ptype, core_body, comp_matrix):
+def build(entries, ptype, core_body, comp_matrix, specimens=(), excluded=frozenset()):
     proj = entries[0]
     core_overview = R.split_sections(core_body).get("Overview", "")
     renderers = {"overview": lambda e: hero(e, ptype), "principles": lambda e: principles(e, core_overview),
@@ -1057,7 +1203,14 @@ def build(entries, ptype, core_body, comp_matrix):
     for sid, title, sub in SECTIONS:
         head = "" if sid == "overview" else (f'<h2 class="sec t-title-h3">{title}</h2>'
                                              + (f'<p class="sub">{esc(sub)}</p>' if sub else ""))
-        body = components(proj["tree"], ptype, comp_matrix) if sid == "components" else per_tone(renderers[sid])
+        if sid == "components":
+            body = components(proj["tree"], ptype, comp_matrix, excluded)
+        elif sid == "specimens":
+            body = specimens_section(specimens)
+        elif sid == "contracts":
+            body = contracts_section(proj, ptype, comp_matrix, excluded, specimens)
+        else:
+            body = per_tone(renderers[sid])
         sections.append(f'<section id="{sid}" data-title="{title}">{head}{body}</section>')
 
     steps = list(dict.fromkeys(n for e in entries for n, _ in type_steps(e["tree"])))
@@ -1082,13 +1235,15 @@ def build(entries, ptype, core_body, comp_matrix):
     options = "".join(f'<option value="{e["key"]}">{esc(e["label"])}</option>' for e in entries)
     titles = {sid: title for sid, title, _ in SECTIONS}
     link = lambda sid, label, cls="": f'<a href="#{sid}"{f" class={cls}" if cls else ""}>{label}</a>'  # noqa: E731
-    comps = [(f"c-{COMP_TOKENS.get(n, n.lower())}", n, is_off(n, ptype, comp_matrix)) for n, *_ in COMPONENTS]
+    comps = [(f"c-{COMP_TOKENS.get(n, n.lower())}", n, is_off(n, ptype, comp_matrix))
+             for n, *_ in COMPONENTS if R.norm(n) not in excluded]
     shown = sum(not off for *_, off in comps)
     count = f"{shown}/{len(comps)}" if shown < len(comps) else str(len(comps))
     groups = [("Overview", "", [link("overview", "Introduction"), link("principles", "Principles")]),
               ("Foundations", "", [link(s, titles[s]) for s in ("color", "typography", "spacing", "radius", "elevation")]),
-              ("Components", count, [link(cid, n, "off" if off else "") for cid, n, off in comps]),
-              ("Reference", "", [link("tokens", "Tokens")])]
+              ("Components", count, [link("specimens", "Project specimens"), link("components", "Core contracts")]
+               + [link(cid, n, "off" if off else "") for cid, n, off in comps]),
+              ("Reference", "", [link("contracts", "Contract matrix"), link("tokens", "Tokens")])]
     side_nav = "".join(f'<div class="sg"><p>{g}{f"<span>{c}</span>" if c else ""}</p>{"".join(ls)}</div>'
                        for g, c, ls in groups)
     mobile_nav = "".join(link(sid, title) for sid, title, _ in SECTIONS)
@@ -1098,7 +1253,7 @@ def build(entries, ptype, core_body, comp_matrix):
             "tone_css": "\n".join(tone_css), "page_css": PAGE_CSS, "page_js": PAGE_JS, "options": options,
             "side_nav": side_nav, "mobile_nav": mobile_nav, "brand": brand, "sections": "\n".join(sections)}
     # Single pass, so filled-in content is never re-scanned for placeholders.
-    return re.sub(r"\{\{(\w+)\}\}", lambda m: vals[m.group(1)], TEMPLATE)
+    return re.sub(r"\{\{(\w+)\}\}", lambda m: vals.get(m.group(1), m.group(0)), TEMPLATE)
 
 
 def main():
@@ -1113,11 +1268,15 @@ def main():
     overlay = project / ".ds4a" / "project.md"
     overlay = overlay if overlay.exists() else None
     tone, ptype, ov_colors = args.tone, args.ptype, []
+    registered, excluded = None, []
     try:
         if overlay:
             ov_fm, _, _ = R.read_layer(overlay)
             tone = tone or R.leaf_text(ov_fm, "tone") or None
             ptype = ptype or R.leaf_text(ov_fm, "type") or None
+            if "specimens" in ov_fm:
+                registered = R.leaf_list(ov_fm, "specimens")
+            excluded = R.leaf_list(ov_fm, "exclude_components")
             if isinstance(ov_fm.get("colors"), dict):
                 ov_colors = [k for k, v in ov_fm["colors"].items() if isinstance(v, R.Leaf)]
         tone = tone or "neutral"
@@ -1126,6 +1285,8 @@ def main():
     except R.ResolveError as e:
         print(f"ds4a preview: {e}", file=sys.stderr)
         return 1
+    specimens = SPEC.load(project, registered)
+    excluded_n = {R.norm(x) for x in excluded}
 
     # Raw library tones for the switcher. Without an overlay the project entry already is the raw tone.
     for p in sorted((lib / "tones").glob("*.md")):
@@ -1141,9 +1302,13 @@ def main():
     comp_matrix = R.load_matrix(R.SKILL_DIR / "references" / "component-matrix.md")[0]
     out = Path(args.out) if args.out else project / ".ds4a" / "preview.html"
     out.parent.mkdir(parents=True, exist_ok=True)
-    page = build(entries, ptype, core_body, comp_matrix)
+    page = build(entries, ptype, core_body, comp_matrix, specimens, excluded_n)
     out.write_text(page, encoding="utf-8")
-    print(f"wrote {out} ({len(page.encode()) // 1024} KB, {len(entries)} tone views)", file=sys.stderr)
+    print(f"wrote {out} ({len(page.encode()) // 1024} KB, {len(entries)} tone views, "
+          f"{len(specimens)} specimen{'s' if len(specimens) != 1 else ''})", file=sys.stderr)
+    for s in specimens:
+        if s["status"] in ("changed", "missing"):
+            print(f"WARNING specimen '{s['slug']}': source {s['status']} since capture", file=sys.stderr)
     for w in R.contrast_report(entries[0]["tree"]):
         print(f"WARNING contrast: {w}", file=sys.stderr)
     return 0
