@@ -18,6 +18,7 @@ Standard library only.
 import argparse
 import html
 import re
+from urllib.parse import quote
 import sys
 from pathlib import Path
 
@@ -43,8 +44,23 @@ TYPE_GROUPS = {"title": "Titles", "label": "Labels", "paragraph": "Paragraphs"}
 esc = html.escape
 
 
-def copy_btn(value, label="Copy value"):
-    return f'<button class="cp" type="button" data-copy="{esc(value)}" aria-label="{esc(label)}" title="Copy">⧉</button>'
+# Icons are CSS masks defined once (see @icon in PAGE_CSS), not inline SVG per button.
+ICONS_CSS = {
+    "copy": '<rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 5.5V4a1.5 1.5 0 00-1.5-1.5H4A1.5 1.5 0 002.5 4v5A1.5 1.5 0 004 10.5h1.5"/>',
+    "done": '<path d="M3.5 8.5l3 3 6-7"/>',
+}
+
+
+def icon_url(n):
+    svg = ("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' "
+           f"stroke-linecap='round' stroke-linejoin='round'>{ICONS_CSS[n]}</svg>").replace('"', "'")
+    return 'url("data:image/svg+xml,' + quote(svg, safe=" '=:/.-") + '")'
+
+
+def copy_btn(value, label="Copy value", text=""):
+    t = f"<span>{esc(text)}</span>" if text else ""
+    return (f'<button class="cp{" cpt" if text else ""}" type="button" data-copy="{esc(value)}" aria-label="{esc(label)}" '
+            f'title="Copy">{t}</button>')
 
 
 def md_inline(s):
@@ -271,8 +287,8 @@ def spacing(e):
 
 def radius(e):
     return '<div class="rgrid">' + "".join(
-        f'<div class="rad" data-s="radius rounded" style="border-radius:{esc(v)}">'
-        f'<code>{esc(k)}</code><span>{esc(v)}</span>{copy_btn(v, f"Copy radius {k}")}</div>'
+        f'<div class="rad" data-s="radius rounded"><div class="rshape" style="border-top-left-radius:{esc(v)}"></div>'
+        f'<div class="rmeta"><div><code>{esc(k)}</code><span>{esc(v)}</span></div>{copy_btn(v, f"Copy radius {k}")}</div></div>'
         for k, v, _ in leaves(e["tree"].get("rounded"))) + "</div>"
 
 
@@ -310,7 +326,7 @@ def tokens(e):
     yaml = "\n".join(R.emit_yaml(bare(e["tree"])))
     return (f'<details class="raw"><summary>Resolved frontmatter · {e["layers"]} · {yaml.count(chr(10)) + 1} lines'
             f'</summary><pre><code>{esc(yaml)}</code></pre></details>'
-            f'<div class="rawcopy">{copy_btn(yaml, "Copy resolved tokens")}</div>')
+            f'<div class="rawcopy">{copy_btn(yaml, "Copy resolved tokens", "Copy all")}</div>')
 
 
 # ───────────────────────── components (rendered once, styled by --c-* vars) ─────────────────────────
@@ -333,16 +349,23 @@ def cap(s):
     return f'<span class="cap">{s}</span>'
 
 
+def block(title, body):
+    return f'<div class="blk"><p class="blkh">{title}</p>{body}</div>'
+
+
 def c_button():
     states = [("default", "", ""), ("hover", " is-hover", ""), ("focus", " is-focus", ""), ("disabled", "", " disabled")]
-    grid = ['<div class="mx"><span></span>'] + [f'<span class="cap hcap">{s}</span>' for s, _, _ in states]
+    grid = ['<div class="mx"><span class="mh"></span>'] + [f'<span class="cap mh">{s}</span>' for s, _, _ in states]
     for v in ("primary", "secondary", "ghost", "destructive"):
-        grid.append(cap(v))
+        grid.append(f'<span class="cap">{v}</span>')
         grid += [f'<div><button class="btn btn-{v}{c}"{a}>{v.title()}</button></div>' for _, c, a in states]
     grid.append("</div>")
-    sizes = ('<div class="row">' + "".join(f'<button class="btn btn-primary btn-{s}">Size {s}</button>' for s in ("sm", "md", "lg"))
-             + f'<button class="btn btn-ghost btn-icon" aria-label="Settings">{icon("gear")}</button></div>')
-    return f'<div class="scroll">{"".join(grid)}</div>{cap("sizes")}{sizes}'
+    fig = lambda b, c: f'<figure>{b}<figcaption class="cap">{c}</figcaption></figure>'  # noqa: E731
+    sizes = ('<div class="bsizes">'
+             + "".join(fig(f'<button class="btn btn-primary btn-{s}">Button</button>', s) for s in ("sm", "md", "lg"))
+             + fig(f'<button class="btn btn-secondary btn-icon" aria-label="Settings">{icon("gear")}</button>', "icon")
+             + "</div>")
+    return block("Variants × states", f'<div class="scroll">{"".join(grid)}</div>') + block("Sizes", sizes)
 
 
 def c_input():
@@ -457,19 +480,42 @@ def c_table():
 
 
 def c_sidebar():
-    def item(n, ic, cls=""):
+    def item(n, ic, cls="", count=""):
         if "dis" in cls:
             return (f'<span class="sbi{cls}" aria-disabled="true" title="{n}">{icon(ic)}'
                     f'<span class="lbl">{n}</span></span>')
-        return f'<a class="sbi{cls}" href="#components" title="{n}">{icon(ic)}<span class="lbl">{n}</span></a>'
+        badge = f'<span class="badge badge-default sbn" aria-label="{count} unread">{count}</span>' if count else ""
+        return f'<a class="sbi{cls}" href="#components" title="{n}">{icon(ic)}<span class="lbl">{n}</span>{badge}</a>'
     nav = (f'<nav class="sb" id="sb-demo" aria-label="Sample"><div class="sbh"><i></i><span class="lbl">Acme</span></div>'
-           f'<div class="sbs"><div class="sbsh">Workspace</div>{item("Dashboard", "grid", " active")}{item("Inbox", "inbox")}'
+           f'<div class="sbs"><div class="sbsh">Workspace</div>{item("Dashboard", "grid", " active")}{item("Inbox", "inbox", "", "3")}'
            f'{item("Analytics", "chart")}</div><div class="sbs"><div class="sbsh">Team</div>{item("Members", "users")}'
            f'{item("Settings", "gear")}{item("Archive", "inbox", " dis")}</div>'
-           f'<div class="sbf"><button class="btn btn-ghost btn-icon" data-collapse aria-label="Collapse sidebar" '
+           f'<div class="sbf"><span class="sbu" title="Ada Lovelace"><b aria-hidden="true">AL</b><span class="lbl">'
+           f'<span>Ada Lovelace</span><small>ada@acme.dev</small></span></span>'
+           f'<button class="btn btn-ghost btn-icon" data-collapse aria-label="Collapse sidebar" '
            f'aria-expanded="true" aria-controls="sb-demo">{icon("panel")}</button></div></nav>')
-    return (f'{cap("press the panel button to collapse")}<div class="sbdemo">{nav}<div class="sbmain"><h4>Dashboard</h4>'
-            '<i style="width:70%"></i><i style="width:90%"></i><i style="width:55%"></i></div></div>')
+    def spark(pts):
+        step = 80 / (len(pts) - 1)
+        line = " ".join(f"{i * step:.0f},{22 - v * 20:.1f}" for i, v in enumerate(pts))
+        return (f'<svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" aria-hidden="true">'
+                f'<polyline points="{line}"/></svg>')
+    stats = "".join(
+        f'<div class="sbst"><span>{k}</span><b>{v}</b><div class="sbdelta"><em title="vs previous 7 days">{d}</em>{spark(pts)}</div></div>'
+        for k, v, d, pts in (("Visitors", "12,480", "▲ 12.4%", (.2, .35, .3, .5, .45, .7, .9)),
+                             ("Conversion", "3.2%", "▲ 0.4 pt", (.5, .4, .55, .5, .6, .58, .7)),
+                             ("Revenue", "$8,240", "▼ 2.1%", (.7, .8, .6, .65, .5, .55, .45))))
+    feed = "".join(f'<li><b aria-hidden="true">{who[0]}</b><p><strong>{who}</strong> {what}</p><time>{when}</time></li>'
+                   for who, what, when in (("Grace", "merged #482 into main", "2m"), ("Ada", "deployed v2.4.1 to production", "14m"),
+                                           ("Linus", "invited 2 members to Team", "1h"), ("Grace", "opened #483", "3h")))
+    bars = "".join(f'<li><div><span>{k}</span><span>{v}%</span></div><i><i style="width:{v}%"></i></i></li>'
+                   for k, v in (("Direct", 42), ("Search", 31), ("Referral", 18), ("Social", 9)))
+    main = (f'<div class="sbmain"><div class="sbtop"><div><h4>Dashboard</h4><p>Acme workspace · last 7 days vs the week before</p></div>'
+            f'<div class="row"><button class="btn btn-secondary btn-sm" type="button">Export</button>'
+            f'<button class="btn btn-primary btn-sm" type="button">New report</button></div></div>'
+            f'<div class="sbstats">{stats}</div><div class="sbgrid">'
+            f'<div class="sbpanel"><h5>Recent activity</h5><ul class="sbfeed">{feed}</ul></div>'
+            f'<div class="sbpanel"><h5>Traffic sources</h5><ul class="sbbars">{bars}</ul></div></div></div>')
+    return f'{cap("press the panel button to collapse")}<div class="sbdemo">{nav}{main}</div>'
 
 
 # (name, render, states, wide)
@@ -495,6 +541,18 @@ def is_off(name, ptype, comp_matrix):
     return bool(ptype) and not comp_matrix.get(R.norm(name), {}).get(ptype, True)
 
 
+CONTRACTS_HOWTO = (
+    '<aside class="note" aria-label="How to change the defaults">'
+    '<p class="note-lead"><b>Skill defaults.</b> These are ds4a&#8217;s starting contracts, not your components yet. '
+    'Make them yours:</p>'
+    '<ol class="note-flow">'
+    '<li><span>Modify</span><code>.ds4a/project.md</code></li>'
+    '<li><span>Preview</span><code>/ds4a init</code></li>'
+    '<li><span>Apply</span><code>/ds4a apply</code></li></ol>'
+    '<p class="note-hint">Override any token, like <code>components.button.radius</code> or <code>colors.primary</code>, '
+    'switch the tone, or drop a contract with <code>exclude_components</code>.</p></aside>')
+
+
 def components(tree, ptype, comp_matrix, excluded=frozenset()):
     cards, shown, hidden = [], 0, 0
     for name, render, wide in COMPONENTS:
@@ -517,7 +575,7 @@ def components(tree, ptype, comp_matrix, excluded=frozenset()):
                f'data-on="Only {esc(ptype)}" data-off="Show all {total}">Show all {total}</button></div>')
     else:
         bar = (f'<div class="cbar"><p>{total} core contracts, styled only from <code>--c-*</code> variables.{note}</p></div>')
-    return bar + f'<div class="cmps">{"".join(cards)}</div>'
+    return CONTRACTS_HOWTO + bar + f'<div class="cmps">{"".join(cards)}</div>'
 
 
 def specimens_section(specimens):
@@ -642,12 +700,16 @@ p code,li code{padding:1px 4px;background:var(--color-muted);border-radius:var(-
 .mark i:nth-child(3){background:var(--color-muted)}.mark i:nth-child(4){background:var(--color-background)}
 .snav{position:relative;display:flex;flex-direction:column;gap:var(--space-xl)}
 .navpill{position:absolute;top:0;left:0;border-radius:var(--radius-sm);background:var(--color-muted);opacity:0;pointer-events:none;transition:transform var(--motion-smooth) var(--ease-out),opacity var(--motion-fast) var(--ease-out)}
+.eyebrow{@t(label-xs);color:var(--color-muted-foreground);text-transform:uppercase;letter-spacing:.06em}
 .sg{display:flex;flex-direction:column;gap:1px}
-.sg>p{display:flex;justify-content:space-between;padding:0 var(--space-sm) var(--space-xs);@t(label-xs);color:var(--color-muted-foreground)}
-.sg>p span{font-variant-numeric:tabular-nums;font-weight:400}
-.sg a{position:relative;@t(paragraph-sm);color:var(--color-muted-foreground);text-decoration:none;padding:6px var(--space-sm);border-radius:var(--radius-sm);transition:color var(--motion-fast) var(--ease-out)}
-.sg a.on{color:var(--color-foreground)}
+.sg>.eyebrow{display:flex;align-items:center;justify-content:space-between;padding:0 var(--space-sm) var(--space-sm)}
+.sg>.eyebrow span{padding:0 6px;border:1px solid var(--color-border);border-radius:var(--radius-full);font-variant-numeric:tabular-nums;letter-spacing:0;line-height:18px}
+.sg a{position:relative;@t(paragraph-sm);color:var(--color-foreground);text-decoration:none;padding:6px var(--space-sm);border-radius:var(--radius-sm);transition:color var(--motion-fast) var(--ease-out)}
 .sg a.on{font-weight:500}
+.sgsub{display:flex;flex-direction:column;gap:1px;margin:2px 0 var(--space-xs) var(--space-md);padding-left:var(--space-xs);border-left:1px solid var(--color-border)}
+.sgsub a{@t(paragraph-sm);padding:4px var(--space-sm);color:var(--color-muted-foreground)}
+.sgsub a.on{color:var(--color-foreground)}
+.sgsub a.on::before{content:"";position:absolute;left:calc(var(--space-xs) * -1 - 1px);top:6px;bottom:6px;width:1px;background:var(--color-foreground)}
 .sg a.off{display:none}:root.all .sg a.off{display:block;opacity:.6}
 .col{min-width:0;--content-max:1180px}
 .top{position:sticky;top:0;z-index:10;padding:var(--space-md) var(--space-3xl);background:var(--color-background);border-bottom:1px solid var(--color-border)}
@@ -667,7 +729,8 @@ main{padding:var(--space-3xl) var(--space-3xl) var(--space-2xl);max-width:var(--
 .pfoot{padding-top:var(--space-xl);border-top:1px solid var(--color-border);@t(paragraph-xs);color:var(--color-muted-foreground)}
 section{padding-bottom:var(--space-4xl)}
 section+section{border-top:1px solid var(--color-border);padding-top:var(--space-3xl)}
-.sec{margin-bottom:var(--space-sm)}
+.sec{margin:var(--space-sm) 0}
+section>.eyebrow{margin:0}
 .sub{max-width:64ch;margin-bottom:var(--space-2xl);color:var(--color-muted-foreground)}
 .gh{@t(label-sm);color:var(--color-muted-foreground);text-transform:uppercase;letter-spacing:.06em;margin:var(--space-2xl) 0 var(--space-md)}
 .tv>.gh:first-child,.grp .gh{margin-top:0}.grp+.grp{margin-top:var(--space-2xl)}
@@ -720,9 +783,12 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .srow{display:grid;grid-template-columns:56px 64px minmax(0,1fr) auto;gap:var(--space-lg);align-items:center;padding:var(--space-xs) 0}
 .srow code{color:var(--color-foreground);font-size:13px}.srow span{@t(paragraph-xs);color:var(--color-muted-foreground)}
 .bar{height:16px;max-width:100%;background:var(--color-primary);border-radius:var(--radius-xs)}
-.rgrid{display:flex;flex-wrap:wrap;gap:var(--space-lg)}
-.rad{width:128px;height:96px;border:1.5px solid var(--color-foreground);background:var(--color-muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-.rad code{color:var(--color-foreground);font-size:13px}.rad span{@t(paragraph-xs);color:var(--color-foreground)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:var(--space-lg)}
+.rad{display:flex;flex-direction:column;gap:var(--space-lg);padding:var(--space-lg);border:1px solid var(--color-border);border-radius:var(--radius-md)}
+/* one stroked corner per step: the curve is the token, nothing else is drawn */
+.rshape{width:64px;height:64px;border-top:2px solid var(--color-foreground);border-left:2px solid var(--color-foreground)}
+.rmeta{display:flex;align-items:center;justify-content:space-between;gap:var(--space-sm)}
+.rmeta code{display:block;color:var(--color-foreground);font-size:13px}.rmeta span{@t(paragraph-xs);color:var(--color-muted-foreground)}
 .egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:var(--space-2xl);padding:var(--space-2xl);background:var(--color-muted);border-radius:var(--radius-lg)}
 .sh{min-height:140px;padding:var(--space-lg);background:var(--color-background);border-radius:var(--radius-md);display:flex;flex-direction:column;justify-content:center;gap:var(--space-xs)}
 .sh b{@t(label-md)}.sh code{color:var(--color-muted-foreground);overflow-wrap:anywhere}.sh span{@t(paragraph-xs);color:var(--color-muted-foreground)}
@@ -736,10 +802,19 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .raw pre{margin:0;padding:var(--space-xl);background:var(--color-muted);overflow:auto;max-height:640px;line-height:1.6}
 .rawcopy{margin-top:var(--space-md)}
 /* component cards */
+.note{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-md);margin-bottom:var(--space-2xl);padding:var(--space-lg) var(--space-xl);border-radius:var(--radius-lg);background:var(--color-muted)}
+.note-lead{@t(paragraph-md);color:var(--color-foreground)}.note-lead b{font-weight:600}
+.note-flow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-sm) var(--space-2xl);margin:0;padding:0;list-style:none}
+.note-flow li{position:relative;display:inline-flex;align-items:center;gap:var(--space-sm);padding:3px var(--space-md) 3px 3px;border:1px solid var(--color-border);border-radius:var(--radius-full);background:var(--color-background)}
+.note-flow li+li::before{content:"";position:absolute;right:100%;top:50%;width:calc(var(--space-2xl) - 8px);margin-right:4px;border-top:1px dashed var(--color-muted-foreground);opacity:.6}
+.note-flow span{padding:0 var(--space-sm);border-radius:var(--radius-full);background:var(--color-foreground);color:var(--color-background);@t(label-xs);line-height:20px}
+.note-flow code{padding:0;background:none;font-size:12px;color:var(--color-foreground)}
+.note-hint{@t(paragraph-sm);color:var(--color-muted-foreground)}
+.note-hint code{font-size:.92em}
 .cbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);margin-bottom:var(--space-xl);color:var(--color-muted-foreground);@t(paragraph-sm)}
 .chipbtn{@t(label-xs);padding:var(--space-xs) var(--space-md);border:1px solid var(--color-border);border-radius:var(--radius-full);background:var(--color-background);color:var(--color-foreground);cursor:pointer}
 :root.all .chipbtn{background:var(--color-foreground);color:var(--color-background)}
-.cmps{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:var(--space-xl);align-items:start}
+.cmps{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:var(--space-xl);align-items:stretch}
 .cmp{border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-xl);min-width:0}
 .cmp.wide{grid-column:1/-1}
 .cmp.off{display:none}:root.all .cmp.off{display:block}
@@ -760,8 +835,12 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .empty p+p{margin-top:var(--space-sm)}
 .empty pre{margin:var(--space-md) 0;padding:var(--space-md);background:var(--color-muted);border-radius:var(--radius-sm);overflow:auto}
 /* copy */
-.cp{margin-left:var(--space-sm);padding:0 4px;border:1px solid transparent;border-radius:var(--radius-xs);background:transparent;color:var(--color-muted-foreground);font:11px/18px ui-monospace,monospace;cursor:pointer;opacity:.6}
-.cp:hover,.cp:focus-visible{opacity:1;border-color:var(--color-border);color:var(--color-foreground)}
+.cp{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--space-xs);vertical-align:middle;min-width:24px;height:24px;margin-left:var(--space-xs);padding:0;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--color-muted-foreground);cursor:pointer;transition:background-color var(--motion-fast) var(--ease-out),color var(--motion-fast) var(--ease-out)}
+.cp::before{content:"";flex:none;width:14px;height:14px;background:currentColor;-webkit-mask:@icon(copy) center/contain no-repeat;mask:@icon(copy) center/contain no-repeat}
+.cp.done::before{-webkit-mask-image:@icon(done);mask-image:@icon(done);animation:cpdone var(--motion-smooth) var(--ease-out)}
+@keyframes cpdone{from{transform:scale(.5);opacity:0}}
+.cp:hover,.cp:focus-visible,.cp.done{background:var(--color-muted);color:var(--color-foreground)}
+.cpt{padding:0 var(--space-sm);margin:0;border:1px solid var(--color-border);@t(label-xs)}
 .valrow{display:flex;align-items:center;gap:var(--space-xs);min-width:0}
 .valrow code{overflow-wrap:anywhere}
 .tmeta .cp{float:right}
@@ -793,9 +872,17 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .btn-ghost.is-hover{border-color:var(--color-border)}
 .btn:disabled,.inp:disabled,.is-disabled,.sbi.dis{opacity:.5;cursor:not-allowed;pointer-events:none}
 .is-focus,.btn:focus-visible,.inp:focus-visible,.sel:focus-visible,.tab:focus-visible,.sbi:focus-visible,.chipbtn:focus-visible,.sg a:focus-visible,.mnav a:focus-visible,.radio input:focus-visible,.rcard input:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
-.mx{display:grid;grid-template-columns:auto repeat(4,minmax(max-content,1fr));gap:var(--space-md) var(--space-lg);align-items:center}
-.mx>div{display:flex;justify-content:center}
-.mx .cap{margin:0}.mx .hcap{text-align:center}
+.blk{display:flex;flex-direction:column;gap:var(--space-md);min-width:0}
+.blk+.blk{border-top:1px solid var(--color-border);padding-top:var(--space-lg)}
+.blkh{@t(label-sm);color:var(--color-foreground)}
+.mx{display:grid;grid-template-columns:minmax(96px,auto) repeat(4,minmax(max-content,1fr));min-width:560px}
+.mx>*{display:flex;align-items:center;padding:var(--space-sm) var(--space-md);border-top:1px solid var(--color-border)}
+.mx>:nth-child(5n+1){padding-left:0}
+.mx>.mh{border-top:0;padding-top:0}
+.mx .cap{margin:0}
+.bsizes{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space-xl) var(--space-2xl)}
+.bsizes figure{margin:0;display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-sm)}
+.bsizes .cap{margin:0}
 /* Input, Field, Fieldset, Form */
 .inp{display:block;width:100%;padding:var(--c-input-padding-md);border:var(--c-input-border);border-radius:var(--c-input-radius);@t(paragraph-md);font-size:var(--c-input-font-size-md);font-weight:var(--c-input-font-weight);background:var(--color-background);color:var(--color-foreground);transition:border-color var(--motion-fast) var(--ease-out)}
 .inp::placeholder{color:var(--color-muted-foreground)}
@@ -814,12 +901,14 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .sel .chev{transition:transform var(--motion-fast) var(--ease-out)}
 .sel.open .chev{transform:rotate(var(--c-select-icon-rotation))}
 .selw{position:relative}
-.selw:has(.pop:not(.closed)){margin-bottom:200px}
 #c-select .g2{min-height:260px}
 .pop{position:absolute;top:100%;left:0;right:0;z-index:5;transform-origin:top;transition:opacity var(--motion-smooth) var(--ease-in-out),transform var(--motion-smooth) var(--ease-in-out),visibility 0s;margin-top:var(--space-xs);padding:var(--c-select-popup-padding);border-radius:var(--c-select-popup-radius);box-shadow:var(--shadow-elevated);background:var(--color-background);max-height:var(--c-select-popup-max-height);overflow:auto;display:flex;flex-direction:column;gap:2px}
-.opt{display:flex;align-items:center;justify-content:space-between;padding:var(--space-sm) var(--space-md);border-radius:max(0px,calc(var(--c-select-popup-radius) - var(--c-select-popup-padding)));@t(paragraph-md);font-size:var(--c-select-font-size);cursor:pointer}
+.opt{position:relative;display:flex;align-items:center;justify-content:space-between;padding:var(--space-sm) var(--space-md);border-radius:max(0px,calc(var(--c-select-popup-radius) - var(--c-select-popup-padding)));@t(paragraph-md);font-size:var(--c-select-font-size);cursor:pointer}
 .pop.closed{opacity:0;transform:translateY(-4px) scale(.98);visibility:hidden;pointer-events:none;transition:opacity var(--motion-smooth) var(--ease-in-out),transform var(--motion-smooth) var(--ease-in-out),visibility 0s linear var(--motion-smooth)}
-.opt.hl{background:var(--color-muted)}
+.pop:not(.js) .opt.hl{background:var(--color-muted)}
+/* one shared highlight that glides to the active option (transform only) */
+.flow{position:absolute;top:0;left:var(--c-select-popup-padding);right:var(--c-select-popup-padding);border-radius:max(0px,calc(var(--c-select-popup-radius) - var(--c-select-popup-padding)));background:var(--color-muted);opacity:0;pointer-events:none;transition:transform var(--motion-smooth) var(--ease-out),opacity var(--motion-fast) var(--ease-out)}
+.flow.on{opacity:1}
 .opt.selected{font-weight:500}
 .opt.selected::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--color-primary)}
 .opt.dis{opacity:.5;cursor:not-allowed;pointer-events:none}
@@ -850,7 +939,7 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 /* Modal */
 .stage{position:relative;display:grid;place-items:center;min-height:360px;padding:var(--space-3xl) var(--space-lg);background:var(--color-muted);border-radius:var(--radius-md);overflow:hidden}
 .ghostpage{position:absolute;inset:var(--space-xl);display:flex;flex-direction:column;gap:var(--space-md)}
-.ghostpage i,.sbmain i{display:block;height:14px;border-radius:var(--radius-xs);background:var(--color-border)}
+.ghostpage i{display:block;height:14px;border-radius:var(--radius-xs);background:var(--color-border)}
 .backdrop{position:absolute;inset:0;background:var(--c-modal-backdrop)}
 .modal{position:relative;width:min(100%,var(--c-modal-width-md));display:flex;flex-direction:column;gap:var(--space-lg);padding:var(--c-modal-padding);background:var(--color-background);border-radius:var(--c-modal-radius);box-shadow:var(--c-modal-shadow)}
 .mh{display:flex;align-items:center;justify-content:space-between;gap:var(--c-modal-header-gap)}.mh h4{@t(title-h6)}
@@ -876,7 +965,7 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .tbl th .ic{vertical-align:middle}
 .tbl .ck{width:16px}.ck input{display:block;width:16px;height:16px;margin:0;accent-color:var(--color-primary)}
 /* Sidebar */
-.sbdemo{display:flex;min-height:380px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden}
+.sbdemo{display:flex;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden}
 .sb{flex:none;width:var(--c-sidebar-width);max-width:70%;display:flex;flex-direction:column;gap:var(--space-lg);padding:0 var(--space-sm) var(--space-sm);border-right:var(--c-sidebar-container-border);background:var(--color-background);overflow:hidden;transition:width var(--motion-smooth) var(--ease-in-out)}
 .sbh{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-lg) var(--space-sm);@t(label-md)}
 .sbh i{flex:none;width:24px;height:24px;border-radius:var(--radius-sm);background:var(--color-primary)}
@@ -884,19 +973,50 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 .sbsh{padding:var(--c-sidebar-section-header-padding);@t(label-xs);font-size:var(--c-sidebar-section-header-font-size);color:var(--color-muted-foreground);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .sbi{display:flex;align-items:center;gap:var(--c-sidebar-item-gap);padding:var(--c-sidebar-item-padding);border-left:var(--c-sidebar-active-indicator);border-left-color:transparent;border-radius:var(--c-sidebar-radius);@t(label-sm);font-size:var(--c-sidebar-item-font-size);font-weight:var(--c-sidebar-item-font-weight);color:var(--color-foreground);text-decoration:none;white-space:nowrap;transition:background-color var(--motion-fast) var(--ease-out)}
 .sbi.active{background:var(--color-muted);border-left:var(--c-sidebar-active-indicator)}
-.sbf{margin-top:auto}
+.sbf{margin:auto calc(var(--space-sm) * -1) 0;display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm) var(--space-sm) 0 var(--space-md);border-top:1px solid var(--color-border)}
+.sbu{flex:1;min-width:0;display:flex;align-items:center;gap:var(--space-sm)}
+.sbu b{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-full);background:var(--color-muted);@t(label-xs);color:var(--color-foreground)}
+.sbu .lbl{display:flex;flex-direction:column;min-width:0;@t(label-sm)}
+.sbu .lbl>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbu small{@t(label-xs);color:var(--color-muted-foreground)}
 .sb.mini{width:var(--space-4xl)}
 .sb.mini .lbl,.sb.mini .sbsh{display:none}
-.sb.mini .sbi,.sb.mini .sbh,.sb.mini .sbf{justify-content:center}.sb.mini .sbf{display:flex}
-.sbmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-md);padding:var(--space-xl)}
-.sbmain h4{@t(title-h6);margin-bottom:var(--space-sm)}
+.sb.mini .sbi,.sb.mini .sbh{justify-content:center}
+.sb.mini .sbf{flex-direction:column;padding-inline:0}.sb.mini .sbu{flex:none}
+.sbmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-xl);padding:var(--space-xl);background:var(--color-background)}
+.sbtop{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md)}
+.sbtop h4{margin:0;@t(title-h6)}.sbtop p{@t(paragraph-sm);color:var(--color-muted-foreground)}
+.sbtop .row{gap:var(--space-sm)}
+.sbn{margin-left:auto}.sb.mini .sbn{display:none}
+.sbstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:var(--space-md)}
+.sbst{display:flex;flex-direction:column;gap:var(--space-xs);padding:var(--space-lg);border:var(--c-card-border);border-radius:var(--c-card-radius)}
+.sbst>span{@t(label-xs);color:var(--color-muted-foreground)}.sbst b{@t(title-h4)}
+.sbdelta{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-sm)}
+.sbdelta em{min-width:0;font-style:normal;@t(label-xs);color:var(--color-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spark{flex:none;width:56px;height:24px;overflow:visible}
+.spark polyline{fill:none;stroke:var(--color-secondary);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.sbgrid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:var(--space-md)}
+@media (max-width:1100px){.sbgrid{grid-template-columns:minmax(0,1fr)}}
+.sbpanel{display:flex;flex-direction:column;gap:var(--space-sm);padding:var(--space-lg);border:var(--c-card-border);border-radius:var(--c-card-radius)}
+.sbpanel h5{margin:0;@t(label-sm)}
+.sbfeed,.sbbars{list-style:none;margin:0;padding:0}
+.sbfeed li{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm) 0;@t(paragraph-sm)}
+.sbfeed li+li{border-top:1px solid var(--color-border)}
+.sbfeed b{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:var(--radius-full);background:var(--color-muted);@t(label-xs)}
+.sbfeed p{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-muted-foreground)}
+.sbfeed strong{font-weight:500;color:var(--color-foreground)}
+.sbfeed time{@t(label-xs);color:var(--color-muted-foreground);white-space:nowrap}
+.sbbars{display:flex;flex-direction:column;gap:var(--space-md);padding-top:var(--space-xs)}
+.sbbars div{display:flex;justify-content:space-between;@t(paragraph-sm)}.sbbars div span+span{color:var(--color-muted-foreground);font-variant-numeric:tabular-nums}
+.sbbars li>i{display:block;height:6px;margin-top:var(--space-xs);border-radius:var(--radius-full);background:var(--color-muted);overflow:hidden}
+.sbbars li>i>i{display:block;height:100%;border-radius:inherit;background:var(--color-secondary)}
 :root.switching *,:root.switching *::before,:root.switching *::after{transition:none!important}
 @media (hover:hover){
-  .sg a:hover{color:var(--color-foreground)}
+  .sgsub a:hover{color:var(--color-foreground)}
   .btn-primary:hover,.btn-destructive:hover{filter:brightness(.9)}
   .btn-secondary:hover{background:var(--color-border)}
   .btn-ghost:hover{border-color:var(--color-border)}
-  .opt:hover{background:var(--color-muted)}
+  .pop:not(.js) .opt:hover{background:var(--color-muted)}
   .radio:hover input,.rcard:hover input{border-color:var(--color-primary)}
   .rcard:hover{border-color:var(--color-primary)}
   .tab:hover{color:var(--color-foreground)}
@@ -932,6 +1052,7 @@ section+section{border-top:1px solid var(--color-border);padding-top:var(--space
 }
 
 """).strip()
+PAGE_CSS = re.sub(r"@icon\((\w+)\)", lambda m: icon_url(m.group(1)), PAGE_CSS)
 
 PAGE_JS = """
 (() => {
@@ -1005,7 +1126,10 @@ PAGE_JS = """
         if (jump) { hl.getBoundingClientRect(); hl.style.transition = ''; }
         hl.style.opacity = 1;
       },
-      rest() { if (!g.hovering && !nav.querySelector(':focus-visible')) g.glide(nav.querySelector('a.on')); },
+      rest() {
+        if (g.hovering || nav.querySelector(':focus-visible')) return;
+        const on = nav.querySelectorAll('a.on'); g.glide(on[on.length - 1]);
+      },
     };
     nav.addEventListener('pointerover', e => {
       const a = e.target.closest('a');
@@ -1100,13 +1224,26 @@ PAGE_JS = """
     const opts = $('.opt:not([aria-disabled=true])', w);
     let active = opts.find(o => o.classList.contains('hl')) || opts.find(o => o.getAttribute('aria-selected') === 'true') || opts[0];
     const isOpen = () => b.getAttribute('aria-expanded') === 'true';
-    const setActive = o => {
+    const flow = document.createElement('i');
+    flow.className = 'flow'; flow.setAttribute('aria-hidden', 'true');
+    p.prepend(flow); p.classList.add('js');
+    const place = (o, instant) => {
+      if (instant) flow.style.transition = 'none';
+      flow.style.height = o.offsetHeight + 'px';
+      flow.style.transform = `translateY(${o.offsetTop}px)`;
+      flow.classList.add('on');
+      if (instant) { void flow.offsetHeight; flow.style.transition = ''; }
+    };
+    const setActive = (o, instant) => {
       if (!o) return;
       active = o;
       opts.forEach(x => x.classList.toggle('hl', x === o));
       b.setAttribute('aria-activedescendant', o.id);
+      place(o, instant);
     };
-    const open = () => { p.classList.remove('closed'); b.classList.add('open'); b.setAttribute('aria-expanded', 'true'); setActive(active); };
+    if (isOpen()) setActive(active, true);
+    new ResizeObserver(() => { if (isOpen()) place(active, true); }).observe(p);
+    const open = () => { p.classList.remove('closed'); b.classList.add('open'); b.setAttribute('aria-expanded', 'true'); setActive(active, true); };
     const close = () => { p.classList.add('closed'); b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); b.removeAttribute('aria-activedescendant'); };
     const pick = o => {
       opts.forEach(x => {
@@ -1172,7 +1309,11 @@ PAGE_JS = """
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-copy]');
     if (!b) return;
-    copyText(b.dataset.copy).then(() => toast('Copied ' + b.dataset.copy), () => toast('Copy failed'));
+    copyText(b.dataset.copy).then(() => {
+      toast('Copied ' + b.dataset.copy);
+      b.classList.add('done'); clearTimeout(b._t);
+      b._t = setTimeout(() => b.classList.remove('done'), 1200);
+    }, () => toast('Copy failed'));
   });
 })();
 """.strip()
@@ -1184,9 +1325,13 @@ SECTIONS = [("overview", "Overview", ""), ("principles", "Principles", "What thi
             ("radius", "Radius", "The radius scale as rendered corners."),
             ("elevation", "Elevation", "Shadow and motion tokens from the tone's prose tables."),
             ("specimens", "Project specimens", "The components this project actually has, captured as static markup and rendered with the same tokens."),
-            ("components", "Core contracts", "The library's contracts with their states. Shape comes from --c-* tokens, so switching tone changes it."),
-            ("contracts", "Contracts", "Every contract's status: enforced, replaced by a specimen, excluded by the overlay, or not used by this project type."),
-            ("tokens", "Tokens", "The resolved frontmatter this page was built from. Click the ⧉ next to a value to copy it.")]
+            ("components", "Core contracts", "The skill's default contracts with their states. Shape comes from --c-* tokens, so switching tone or overriding a token changes it."),
+            ("contracts", "Contract matrix", "Every contract's status: enforced, replaced by a specimen, excluded by the overlay, or not used by this project type."),
+            ("tokens", "Tokens", "The resolved frontmatter this page was built from. Use the copy icon next to a value to copy it.")]
+
+
+GROUP_OF = {"principles": "Overview", **dict.fromkeys(("color", "typography", "spacing", "radius", "elevation"), "Foundations"),
+            "specimens": "Components", "components": "Components", "contracts": "Reference", "tokens": "Reference"}
 
 
 def build(entries, ptype, core_body, comp_matrix, specimens=(), excluded=frozenset()):
@@ -1201,7 +1346,7 @@ def build(entries, ptype, core_body, comp_matrix, specimens=(), excluded=frozens
 
     sections = []
     for sid, title, sub in SECTIONS:
-        head = "" if sid == "overview" else (f'<h2 class="sec t-title-h3">{title}</h2>'
+        head = "" if sid == "overview" else (f'<p class="eyebrow">{GROUP_OF[sid]}</p><h2 class="sec t-title-h3">{title}</h2>'
                                              + (f'<p class="sub">{esc(sub)}</p>' if sub else ""))
         if sid == "components":
             body = components(proj["tree"], ptype, comp_matrix, excluded)
@@ -1241,10 +1386,11 @@ def build(entries, ptype, core_body, comp_matrix, specimens=(), excluded=frozens
     count = f"{shown}/{len(comps)}" if shown < len(comps) else str(len(comps))
     groups = [("Overview", "", [link("overview", "Introduction"), link("principles", "Principles")]),
               ("Foundations", "", [link(s, titles[s]) for s in ("color", "typography", "spacing", "radius", "elevation")]),
-              ("Components", count, [link("specimens", "Project specimens"), link("components", "Core contracts")]
-               + [link(cid, n, "off" if off else "") for cid, n, off in comps]),
+              ("Components", count, [link("specimens", "Project specimens"), link("components", "Core contracts"),
+                                     '<div class="sgsub">' + "".join(link(cid, n, "off" if off else "") for cid, n, off in comps)
+                                     + "</div>"]),
               ("Reference", "", [link("contracts", "Contract matrix"), link("tokens", "Tokens")])]
-    side_nav = "".join(f'<div class="sg"><p>{g}{f"<span>{c}</span>" if c else ""}</p>{"".join(ls)}</div>'
+    side_nav = "".join(f'<div class="sg"><p class="eyebrow">{g}{f"<span>{c}</span>" if c else ""}</p>{"".join(ls)}</div>'
                        for g, c, ls in groups)
     mobile_nav = "".join(link(sid, title) for sid, title, _ in SECTIONS)
     brand = "".join(f'<small class="tv" data-for="{e["key"]}">{esc(e["tone"])} · '
